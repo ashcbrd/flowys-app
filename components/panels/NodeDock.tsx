@@ -1,0 +1,323 @@
+"use client";
+
+import { DragEvent, useState, useEffect } from "react";
+import {
+  FileInput,
+  Globe,
+  Sparkles,
+  GitBranch,
+  FileOutput,
+  Plug,
+  Webhook,
+  Lock,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useWorkflowStore } from "@/store/workflow";
+
+type PlanType = "free" | "builder" | "team";
+
+interface NodeType {
+  type: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  gradient: string;
+  requiredPlan: PlanType; // Minimum plan required to use this node
+}
+
+const nodeTypes: NodeType[] = [
+  {
+    type: "input",
+    label: "Input",
+    description: "Start your workflow with user input",
+    icon: <FileInput className="h-5 w-5" />,
+    color: "bg-emerald-500",
+    gradient: "from-emerald-400 to-emerald-600",
+    requiredPlan: "free",
+  },
+  {
+    type: "api",
+    label: "API",
+    description: "Fetch data from external services",
+    icon: <Globe className="h-5 w-5" />,
+    color: "bg-sky-500",
+    gradient: "from-sky-400 to-sky-600",
+    requiredPlan: "free",
+  },
+  {
+    type: "ai",
+    label: "AI",
+    description: "Process with artificial intelligence",
+    icon: <Sparkles className="h-5 w-5" />,
+    color: "bg-violet-500",
+    gradient: "from-violet-400 to-violet-600",
+    requiredPlan: "builder",
+  },
+  {
+    type: "logic",
+    label: "Logic",
+    description: "Transform, filter, or route data",
+    icon: <GitBranch className="h-5 w-5" />,
+    color: "bg-amber-500",
+    gradient: "from-amber-400 to-amber-600",
+    requiredPlan: "free",
+  },
+  {
+    type: "integration",
+    label: "Apps",
+    description: "Connect to Slack, GitHub, and more",
+    icon: <Plug className="h-5 w-5" />,
+    color: "bg-indigo-500",
+    gradient: "from-indigo-400 to-indigo-600",
+    requiredPlan: "builder",
+  },
+  {
+    type: "webhook",
+    label: "Webhook",
+    description: "Send data to external endpoints",
+    icon: <Webhook className="h-5 w-5" />,
+    color: "bg-cyan-500",
+    gradient: "from-cyan-400 to-cyan-600",
+    requiredPlan: "builder",
+  },
+  {
+    type: "output",
+    label: "Output",
+    description: "Return the final result",
+    icon: <FileOutput className="h-5 w-5" />,
+    color: "bg-rose-500",
+    gradient: "from-rose-400 to-rose-600",
+    requiredPlan: "free",
+  },
+];
+
+// Check if user's plan meets the required plan level
+function hasAccess(userPlan: PlanType, requiredPlan: PlanType): boolean {
+  const planLevels: Record<PlanType, number> = {
+    free: 0,
+    builder: 1,
+    team: 2,
+  };
+  return planLevels[userPlan] >= planLevels[requiredPlan];
+}
+
+// Node limits per plan
+const NODE_LIMITS: Record<PlanType, number> = {
+  free: 4,
+  builder: 25,
+  team: -1, // Unlimited
+};
+
+export function NodeDock() {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [userPlan, setUserPlan] = useState<PlanType>("free");
+  const { toast } = useToast();
+  const nodes = useWorkflowStore((state) => state.nodes);
+  const workflow = useWorkflowStore((state) => state.workflow);
+
+  // Purchased workflows unlock premium nodes and bypass node limits
+  const isPurchased = workflow?.isPurchased === true;
+
+  const nodeCount = nodes.length;
+  const nodeLimit = NODE_LIMITS[userPlan];
+  // Skip node limit check for purchased workflows
+  const isAtNodeLimit = !isPurchased && nodeLimit !== -1 && nodeCount >= nodeLimit;
+
+  // Fetch user's subscription plan
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch("/api/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          setUserPlan(data.subscription?.plan || "free");
+        }
+      } catch {
+        // Default to free if fetch fails
+        setUserPlan("free");
+      }
+    };
+    fetchPlan();
+  }, []);
+
+  const onDragStart = (event: DragEvent, node: NodeType) => {
+    // Purchased workflows unlock premium nodes regardless of plan
+    const isLocked = !isPurchased && !hasAccess(userPlan, node.requiredPlan);
+
+    // Also check node limit (already considers isPurchased)
+    if (isAtNodeLimit) {
+      event.preventDefault();
+      const upgradeTo = userPlan === "free" ? "Builder" : "Team";
+      toast({
+        title: "Node Limit Reached",
+        description: `Your ${userPlan} plan allows up to ${nodeLimit} nodes per workflow. Upgrade to ${upgradeTo} for more.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isLocked) {
+      event.preventDefault();
+      toast({
+        title: "Upgrade Required",
+        description: `The ${node.label} node requires a ${node.requiredPlan === "builder" ? "Builder" : "Team"} plan, or use a purchased workflow that includes this node.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    event.dataTransfer.setData("application/reactflow", node.type);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  // Calculate scale for dock magnification effect
+  const getScale = (index: number) => {
+    if (hoveredIndex === null) return 1;
+    const distance = Math.abs(index - hoveredIndex);
+    if (distance === 0) return 1.25;
+    if (distance === 1) return 1.1;
+    return 1;
+  };
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+        {/* Floating dock container */}
+        <div
+          className={cn(
+            "flex items-end gap-1 px-3 py-2.5 rounded-2xl",
+            // Glassmorphism effect
+            "bg-white/70 dark:bg-gray-900/70",
+            "backdrop-blur-xl backdrop-saturate-150",
+            "border border-white/20 dark:border-white/10",
+            "shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_0_1px_rgba(255,255,255,0.1)_inset]",
+            "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)_inset]"
+          )}
+        >
+          {nodeTypes.map((node, index) => {
+            // Purchased workflows unlock premium nodes regardless of plan
+            const isLocked = !isPurchased && !hasAccess(userPlan, node.requiredPlan);
+
+            return (
+              <Tooltip key={node.type}>
+                <TooltipTrigger asChild>
+                  <div
+                    draggable={!isLocked}
+                    onDragStart={(e) => onDragStart(e, node)}
+                    onClick={() => {
+                      if (isLocked) {
+                        toast({
+                          title: "Upgrade Required",
+                          description: `The ${node.label} node requires a ${node.requiredPlan === "builder" ? "Builder" : "Team"} plan, or use a purchased workflow that includes this node.`,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    style={{
+                      transform: `scale(${getScale(index)})`,
+                      transformOrigin: "bottom center",
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 p-2 rounded-xl",
+                      "transition-all duration-200 ease-out",
+                      "select-none relative",
+                      isLocked
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-grab hover:bg-white/50 dark:hover:bg-white/10 active:cursor-grabbing active:scale-95"
+                    )}
+                  >
+                    {/* Icon container with gradient */}
+                    <div
+                      className={cn(
+                        "w-11 h-11 rounded-xl flex items-center justify-center text-white relative",
+                        "bg-gradient-to-br shadow-lg",
+                        "transition-shadow duration-200",
+                        hoveredIndex === index && !isLocked && "shadow-xl",
+                        node.gradient,
+                        isLocked && "grayscale"
+                      )}
+                    >
+                      {node.icon}
+                      {/* Lock overlay for locked nodes */}
+                      {isLocked && (
+                        <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                          <Lock className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Label */}
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium text-foreground/70",
+                        "transition-colors duration-200",
+                        hoveredIndex === index && !isLocked && "text-foreground"
+                      )}
+                    >
+                      {node.label}
+                    </span>
+                    {/* Pro badge for locked nodes */}
+                    {isLocked && (
+                      <span className="absolute -top-1 -right-1 text-[8px] px-1 py-0.5 rounded bg-amber-500 text-white font-bold">
+                        PRO
+                      </span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  sideOffset={8}
+                  className="bg-background/95 backdrop-blur-sm"
+                >
+                  <p className="font-medium">{node.label}</p>
+                  <p className="text-xs text-muted-foreground">{node.description}</p>
+                  {isLocked && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium">
+                      Requires {node.requiredPlan === "builder" ? "Builder" : "Team"} plan
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        {/* Node count indicator */}
+        {nodeLimit !== -1 && (
+          <div
+            className={cn(
+              "absolute -top-8 left-1/2 -translate-x-1/2 text-xs px-2 py-1 rounded-full font-medium",
+              "bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-white/20 dark:border-white/10 shadow-sm",
+              isAtNodeLimit
+                ? "text-red-600 dark:text-red-400"
+                : nodeCount >= nodeLimit * 0.75
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-muted-foreground"
+            )}
+          >
+            {nodeCount} / {nodeLimit} nodes
+            {isAtNodeLimit && <Lock className="h-3 w-3 ml-1 inline" />}
+          </div>
+        )}
+
+        {/* Subtle reflection effect */}
+        <div
+          className={cn(
+            "absolute -bottom-3 left-1/2 -translate-x-1/2 w-[80%] h-4",
+            "bg-gradient-to-b from-black/5 to-transparent dark:from-white/5",
+            "rounded-full blur-sm opacity-50"
+          )}
+        />
+      </div>
+    </TooltipProvider>
+  );
+}
