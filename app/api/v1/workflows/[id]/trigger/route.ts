@@ -71,6 +71,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createApiErrorResponse("Workflow not found", 404);
     }
 
+    // Verify the API key owner has access to this workflow
+    if (workflow.userId !== authResult.apiKey!.userId) {
+      return createApiErrorResponse(
+        "Access denied. This API key cannot access this workflow.",
+        403
+      );
+    }
+
     // Validate workflow against plan limits (node types, node count)
     const validation = await validateWorkflowAgainstPlan(workflow.userId, workflow.nodes);
     if (!validation.valid) {
