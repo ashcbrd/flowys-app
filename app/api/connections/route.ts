@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     // Store connection
     await connectToDatabase();
-    const { encrypted, iv } = encryptCredentials(credentials);
+    const { encrypted, iv, salt } = encryptCredentials(credentials);
 
     const connection = await Connection.create({
       _id: uuid(),
@@ -101,6 +101,7 @@ export async function POST(request: Request) {
       name,
       encryptedCredentials: encrypted,
       credentialsIv: iv,
+      credentialsSalt: salt,
       metadata: validation.metadata,
       enabled: true,
     });

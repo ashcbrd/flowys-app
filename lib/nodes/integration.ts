@@ -43,10 +43,11 @@ export class IntegrationNodeHandler implements NodeHandler {
         return { success: false, error: `Action not found: ${config.actionId}` };
       }
 
-      // Decrypt credentials
+      // Decrypt credentials (salt is optional for backward compatibility)
       const credentials = decryptCredentials(
         connection.encryptedCredentials,
-        connection.credentialsIv
+        connection.credentialsIv,
+        connection.credentialsSalt
       );
 
       // Build connection data
