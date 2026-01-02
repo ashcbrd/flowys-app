@@ -1,0 +1,17 @@
+# Flowys App - robots.txt
+# https://app.flowys.io
+
+User-agent: *
+# The app is mostly authenticated content
+Disallow: /workflow
+Disallow: /integrations
+Disallow: /settings
+Disallow: /api/
+
+# Allow public pages
+Allow: /login
+Allow: /docs
+Allow: /tutorial
+
+# Sitemap location
+Sitemap: https://app.flowys.io/sitemap.xml
