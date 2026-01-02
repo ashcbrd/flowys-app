@@ -65,8 +65,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Verify signature if secret is configured
-    if (webhook.secret) {
+    // Security: Webhook secret is required for signature verification
+    // If no secret is configured, require one to be set for security
+    if (!webhook.secret) {
+      // Log security warning
+      console.warn(`Security warning: Webhook "${webhook.name}" (${webhook._id}) has no secret configured. Requests are being processed without signature verification.`);
+
+      // For new webhooks created after this change, we recommend requiring a secret.
+      // Existing webhooks without secrets will still work but log warnings.
+      // To enforce secrets, uncomment the following block:
+      /*
+      await WebhookLog.create({
+        webhookId: webhook._id,
+        workflowId: webhook.workflowId,
+        direction: "incoming",
+        method: "POST",
+        url: request.url,
+        requestBody: body,
+        status: "failed",
+        error: "Webhook secret not configured. Please set a secret for this webhook.",
+        sourceIp,
+        userAgent,
+        duration: Date.now() - startTime
+      });
+
+      return NextResponse.json(
+        { error: "Webhook requires authentication. Please configure a webhook secret." },
+        { status: 401 }
+      );
+      */
+    } else {
+      // Verify signature when secret is configured
       const signature = request.headers.get("x-webhook-signature") ||
                        request.headers.get("x-hub-signature-256") ||
                        request.headers.get("x-signature");
@@ -91,6 +120,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           { error: "Signature required" },
           { status: 401 }
         );
+      }
+
+      // Check for replay attacks using timestamp header
+      const timestamp = request.headers.get("x-webhook-timestamp");
+      if (timestamp) {
+        const timestampMs = parseInt(timestamp, 10) * 1000;
+        const now = Date.now();
+        const maxAge = 5 * 60 * 1000; // 5 minutes
+
+        if (isNaN(timestampMs) || Math.abs(now - timestampMs) > maxAge) {
+          await WebhookLog.create({
+            webhookId: webhook._id,
+            workflowId: webhook.workflowId,
+            direction: "incoming",
+            method: "POST",
+            url: request.url,
+            requestBody: body,
+            status: "failed",
+            error: "Webhook timestamp expired or invalid",
+            sourceIp,
+            userAgent,
+            duration: Date.now() - startTime
+          });
+
+          return NextResponse.json(
+            { error: "Request timestamp expired. Possible replay attack." },
+            { status: 401 }
+          );
+        }
       }
 
       const bodyString = JSON.stringify(body);
