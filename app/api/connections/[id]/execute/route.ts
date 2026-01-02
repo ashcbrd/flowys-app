@@ -58,10 +58,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Decrypt credentials
+    // Decrypt credentials (salt is optional for backward compatibility)
     const credentials = decryptCredentials(
       connection.encryptedCredentials,
-      connection.credentialsIv
+      connection.credentialsIv,
+      connection.credentialsSalt
     );
 
     // Build connection data
