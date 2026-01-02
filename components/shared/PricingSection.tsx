@@ -8,15 +8,16 @@ import { Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-// Pricing tiers configuration
+// Pricing tiers configuration - Must match lib/db/models/Subscription.ts CREDIT_TIERS
+// Competitive with Make/Zapier while maintaining healthy margins (77-92%)
 const PRICING_TIERS = [
-  { credits: 500, builderPrice: 9, teamPrice: 19 },
-  { credits: 1000, builderPrice: 15, teamPrice: 29 },
-  { credits: 2500, builderPrice: 29, teamPrice: 49 },
-  { credits: 5000, builderPrice: 49, teamPrice: 79 },
-  { credits: 10000, builderPrice: 79, teamPrice: 129 },
-  { credits: 25000, builderPrice: 149, teamPrice: 229 },
-  { credits: 50000, builderPrice: 249, teamPrice: 399 },
+  { credits: 1000, builderPrice: 9, teamPrice: 19 },
+  { credits: 2000, builderPrice: 15, teamPrice: 29 },
+  { credits: 4000, builderPrice: 29, teamPrice: 49 },
+  { credits: 8000, builderPrice: 49, teamPrice: 79 },
+  { credits: 15000, builderPrice: 79, teamPrice: 129 },
+  { credits: 35000, builderPrice: 149, teamPrice: 229 },
+  { credits: 75000, builderPrice: 249, teamPrice: 399 },
 ];
 
 interface PricingSectionProps {
@@ -334,7 +335,7 @@ export function PricingSection({
               <span className="text-4xl font-bold text-foreground">$0</span>
               <span className="text-muted-foreground">/month</span>
             </div>
-            <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4">100 credits/month</p>
+            <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4">200 credits/month</p>
             <p className="text-muted-foreground text-sm mb-6">Perfect for getting started. No strings attached.</p>
 
             <div className="space-y-3 mb-6">
