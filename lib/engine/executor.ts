@@ -258,19 +258,35 @@ export class WorkflowExecutor {
 
   async execute(
     input: Record<string, unknown> = {},
-    onNodeUpdate?: ExecutionCallback
+    onNodeUpdate?: ExecutionCallback,
+    options: { timeoutMs?: number } = {}
   ): Promise<WorkflowExecutionResult> {
     const startTime = Date.now();
+    // Default timeout: 5 minutes (300000ms)
+    const timeoutMs = options.timeoutMs ?? 300000;
+
     const context: ExecutionContext = {
       nodeOutputs: new Map(),
       globalContext: { ...input },
       logs: [],
     };
 
+    // Helper to check if execution has exceeded timeout
+    const checkTimeout = () => {
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error(
+          `Workflow execution timed out after ${Math.floor(timeoutMs / 1000)} seconds. ` +
+          `Consider breaking your workflow into smaller parts or optimizing slow nodes.`
+        );
+      }
+    };
+
     try {
       const executionOrder = this.getTopologicalOrder();
 
       for (const nodeId of executionOrder) {
+        // Check timeout before each node
+        checkTimeout();
         const node = this.nodeMap.get(nodeId);
         if (!node) {
           throw new Error(`Node ${nodeId} not found`);
