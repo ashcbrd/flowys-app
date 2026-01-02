@@ -108,3 +108,10 @@ export {
   type ICart,
   type ICartItem,
 } from "./models/Cart";
+
+export {
+  RateLimit,
+  type IRateLimit,
+  checkRateLimit,
+  getRateLimitStatus,
+} from "./models/RateLimit";

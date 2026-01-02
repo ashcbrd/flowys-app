@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, ApiKey, hashApiKey, type ApiKeyScope } from "@/lib/db";
+import { checkRateLimit } from "@/lib/db/models/RateLimit";
 import crypto from "crypto";
 
 export interface AuthenticatedRequest {
   apiKey: {
     id: string;
+    userId: string;
     name: string;
     scopes: ApiKeyScope[];
   };
@@ -15,10 +17,12 @@ export interface ApiAuthResult {
   error?: string;
   statusCode?: number;
   apiKey?: AuthenticatedRequest["apiKey"];
+  rateLimit?: {
+    limit: number;
+    remaining: number;
+    reset: number;
+  };
 }
-
-// In-memory rate limit store (use Redis in production)
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 /**
  * Authenticate an API request using API key
@@ -115,24 +119,26 @@ export async function authenticateApiKey(
     }
   }
 
-  // Check rate limit
-  const rateLimitKey = `ratelimit:${apiKeyDoc._id}`;
-  const now = Date.now();
-  const windowMs = apiKeyDoc.rateLimitWindow * 1000;
+  // Check rate limit using MongoDB-based persistent storage
+  const rateLimitKey = `apikey:${apiKeyDoc._id}`;
+  const rateLimitResult = await checkRateLimit({
+    key: rateLimitKey,
+    limit: apiKeyDoc.rateLimit,
+    windowSeconds: apiKeyDoc.rateLimitWindow,
+  });
 
-  let rateData = rateLimitStore.get(rateLimitKey);
-  if (!rateData || now > rateData.resetAt) {
-    rateData = { count: 0, resetAt: now + windowMs };
-  }
+  const rateLimitInfo = {
+    limit: apiKeyDoc.rateLimit,
+    remaining: rateLimitResult.remaining,
+    reset: Math.floor(rateLimitResult.resetAt.getTime() / 1000),
+  };
 
-  rateData.count++;
-  rateLimitStore.set(rateLimitKey, rateData);
-
-  if (rateData.count > apiKeyDoc.rateLimit) {
+  if (!rateLimitResult.allowed) {
     return {
       success: false,
       error: `Rate limit exceeded. Limit: ${apiKeyDoc.rateLimit} requests per ${apiKeyDoc.rateLimitWindow} seconds`,
-      statusCode: 429
+      statusCode: 429,
+      rateLimit: rateLimitInfo,
     };
   }
 
@@ -165,9 +171,11 @@ export async function authenticateApiKey(
     success: true,
     apiKey: {
       id: apiKeyDoc._id.toString(),
+      userId: apiKeyDoc.userId,
       name: apiKeyDoc.name,
       scopes: apiKeyDoc.scopes
-    }
+    },
+    rateLimit: rateLimitInfo,
   };
 }
 
