@@ -10,14 +10,16 @@ export interface CreditTier {
   teamPrice: number;
 }
 
+// Credit tiers - Competitive with Make/Zapier while maintaining healthy margins
+// AI cost: ~$0.0075/call (GPT-4o), margin at lowest tier: 92%, highest: 77%
 export const CREDIT_TIERS: CreditTier[] = [
-  { credits: 500, builderPrice: 9, teamPrice: 19 },
-  { credits: 1000, builderPrice: 15, teamPrice: 29 },
-  { credits: 2500, builderPrice: 29, teamPrice: 49 },
-  { credits: 5000, builderPrice: 49, teamPrice: 79 },
-  { credits: 10000, builderPrice: 79, teamPrice: 129 },
-  { credits: 25000, builderPrice: 149, teamPrice: 229 },
-  { credits: 50000, builderPrice: 249, teamPrice: 399 },
+  { credits: 1000, builderPrice: 9, teamPrice: 19 },
+  { credits: 2000, builderPrice: 15, teamPrice: 29 },
+  { credits: 4000, builderPrice: 29, teamPrice: 49 },
+  { credits: 8000, builderPrice: 49, teamPrice: 79 },
+  { credits: 15000, builderPrice: 79, teamPrice: 129 },
+  { credits: 35000, builderPrice: 149, teamPrice: 229 },
+  { credits: 75000, builderPrice: 249, teamPrice: 399 },
 ];
 
 // Plan limits configuration
@@ -44,7 +46,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxWorkflows: 3,
     maxNodesPerWorkflow: 4,
-    monthlyCredits: 100,
+    monthlyCredits: 200, // Increased from 100 for better user experience
     allowedNodeTypes: ["input", "logic", "api", "output"],
     features: {
       aiNodes: false,
@@ -139,9 +141,9 @@ const SubscriptionSchema = new Schema<ISubscription>(
       default: "free",
     },
     creditTierIndex: { type: Number, default: 0, min: 0, max: 6 },
-    monthlyCredits: { type: Number, required: true, default: 100 },
+    monthlyCredits: { type: Number, required: true, default: 200 },
     creditsUsed: { type: Number, default: 0, min: 0 },
-    creditsRemaining: { type: Number, required: true, default: 100 },
+    creditsRemaining: { type: Number, required: true, default: 200 },
     periodStart: { type: Date, required: true },
     periodEnd: { type: Date, required: true },
     status: {
