@@ -12,6 +12,7 @@ export type ApiKeyScope =
 
 export interface IApiKey extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: string; // Owner of the API key
   name: string;
   description?: string;
 
@@ -42,6 +43,7 @@ export interface IApiKey extends Document {
 
 const ApiKeySchema = new Schema<IApiKey>(
   {
+    userId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
 
