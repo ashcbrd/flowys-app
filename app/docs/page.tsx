@@ -27,10 +27,16 @@ import { cn } from "@/lib/utils";
 import { DocsSearch } from "@/components/docs/DocsSearch";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-type DocSection = "getting-started" | "nodes" | "integrations" | "api" | "webhooks";
+type DocSection =
+  | "getting-started"
+  | "nodes"
+  | "integrations"
+  | "api"
+  | "webhooks";
 
 export default function DocsPage() {
-  const [activeSection, setActiveSection] = useState<DocSection>("getting-started");
+  const [activeSection, setActiveSection] =
+    useState<DocSection>("getting-started");
 
   const handleNavigate = (sectionId: string) => {
     setActiveSection(sectionId as DocSection);
@@ -48,7 +54,9 @@ export default function DocsPage() {
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold">Flowys</span>
-            <span className="text-sm text-muted-foreground ml-2 hidden sm:inline">Documentation</span>
+            <span className="text-sm text-muted-foreground ml-2 hidden sm:inline">
+              Documentation
+            </span>
           </Link>
 
           <div className="flex items-center gap-3">
@@ -155,10 +163,10 @@ function GettingStartedDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">What is Flowys?</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Flowys is a visual workflow builder that lets you automate tasks by connecting
-          different "nodes" together. Think of it like building with LEGO blocks - each block
-          does something specific, and when you connect them, they work together to accomplish
-          bigger tasks.
+          Flowys is a visual workflow builder that lets you automate tasks by
+          connecting different "nodes" together. Think of it like building with
+          LEGO blocks - each block does something specific, and when you connect
+          them, they work together to accomplish bigger tasks.
         </p>
         <div className="bg-muted/50 rounded-lg p-4 border">
           <p className="font-medium mb-2">For example, you can:</p>
@@ -208,7 +216,9 @@ function GettingStartedDocs() {
           >
             <div className="flex items-center gap-2 text-sm bg-background rounded p-2">
               <Settings className="h-4 w-4 text-primary" />
-              <span>Click the node, then adjust settings in the right panel</span>
+              <span>
+                Click the node, then adjust settings in the right panel
+              </span>
             </div>
           </StepCard>
 
@@ -348,7 +358,8 @@ function IntegrationsDocs() {
       <div>
         <h1 className="text-3xl font-bold mb-2">App Integrations</h1>
         <p className="text-lg text-muted-foreground">
-          Connect your workflows to popular third-party services with pre-built integrations.
+          Connect your workflows to popular third-party services with pre-built
+          integrations.
         </p>
       </div>
 
@@ -356,22 +367,32 @@ function IntegrationsDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Overview</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Integrations allow you to connect Flowys to external apps like Slack, GitHub, Google Sheets,
-          and more. Instead of manually configuring API calls, integrations provide:
+          Integrations allow you to connect Flowys to external apps like Slack,
+          GitHub, Google Sheets, and more. Instead of manually configuring API
+          calls, integrations provide:
         </p>
         <div className="bg-muted/50 rounded-lg p-4 border">
           <ul className="space-y-2 text-muted-foreground">
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Secure authentication</strong> - OAuth2 or API key based, with encrypted credential storage</span>
+              <span>
+                <strong>Secure authentication</strong> - OAuth2 or API key
+                based, with encrypted credential storage
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Pre-built actions</strong> - Common operations ready to use (send message, create issue, etc.)</span>
+              <span>
+                <strong>Pre-built actions</strong> - Common operations ready to
+                use (send message, create issue, etc.)
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>No code required</strong> - Just select the action and fill in the inputs</span>
+              <span>
+                <strong>No code required</strong> - Just select the action and
+                fill in the inputs
+              </span>
             </li>
           </ul>
         </div>
@@ -384,17 +405,32 @@ function IntegrationsDocs() {
           <IntegrationCard
             name="Slack"
             authType="OAuth2"
-            actions={["Send Message", "Create Channel", "List Channels", "Upload File"]}
+            actions={[
+              "Send Message",
+              "Create Channel",
+              "List Channels",
+              "Upload File",
+            ]}
           />
           <IntegrationCard
             name="GitHub"
             authType="OAuth2"
-            actions={["Create Issue", "Create PR", "List Repos", "Get/Update Files"]}
+            actions={[
+              "Create Issue",
+              "Create PR",
+              "List Repos",
+              "Get/Update Files",
+            ]}
           />
           <IntegrationCard
             name="Google Sheets"
             authType="OAuth2"
-            actions={["Read Range", "Write Range", "Append Rows", "Create Spreadsheet"]}
+            actions={[
+              "Read Range",
+              "Write Range",
+              "Append Rows",
+              "Create Spreadsheet",
+            ]}
           />
           <IntegrationCard
             name="Notion"
@@ -404,7 +440,12 @@ function IntegrationsDocs() {
           <IntegrationCard
             name="Discord"
             authType="OAuth2"
-            actions={["Send Message", "Create Channel", "List Guilds", "Add Reaction"]}
+            actions={[
+              "Send Message",
+              "Create Channel",
+              "List Guilds",
+              "Add Reaction",
+            ]}
           />
           <IntegrationCard
             name="Airtable"
@@ -414,7 +455,12 @@ function IntegrationsDocs() {
           <IntegrationCard
             name="OpenAI"
             authType="API Key"
-            actions={["Chat Completion", "Generate Image", "Embeddings", "Transcribe"]}
+            actions={[
+              "Chat Completion",
+              "Generate Image",
+              "Embeddings",
+              "Transcribe",
+            ]}
           />
           <IntegrationCard
             name="SendGrid"
@@ -429,7 +475,12 @@ function IntegrationsDocs() {
           <IntegrationCard
             name="Stripe"
             authType="API Key"
-            actions={["Create Customer", "Payment Intent", "Subscription", "Refund"]}
+            actions={[
+              "Create Customer",
+              "Payment Intent",
+              "Subscription",
+              "Refund",
+            ]}
           />
         </div>
       </section>
@@ -467,9 +518,12 @@ function IntegrationsDocs() {
 
       {/* Using in Workflows */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Using Integrations in Workflows</h2>
+        <h2 className="text-2xl font-semibold">
+          Using Integrations in Workflows
+        </h2>
         <p className="text-muted-foreground">
-          Once you've connected an integration, you can use it in your workflows:
+          Once you've connected an integration, you can use it in your
+          workflows:
         </p>
 
         <div className="space-y-4">
@@ -483,7 +537,8 @@ function IntegrationsDocs() {
           <div className="border rounded-lg p-4">
             <h3 className="font-semibold mb-2">2. Select Your Connection</h3>
             <p className="text-sm text-muted-foreground">
-              In the node configuration panel, choose which connected account to use.
+              In the node configuration panel, choose which connected account to
+              use.
             </p>
           </div>
 
@@ -497,7 +552,8 @@ function IntegrationsDocs() {
           <div className="border rounded-lg p-4">
             <h3 className="font-semibold mb-2">4. Configure Inputs</h3>
             <p className="text-sm text-muted-foreground">
-              Fill in the required fields. Use {"{{variableName}}"} to inject dynamic values from previous nodes.
+              Fill in the required fields. Use {"{{variableName}}"} to inject
+              dynamic values from previous nodes.
             </p>
           </div>
         </div>
@@ -511,17 +567,26 @@ function IntegrationsDocs() {
         </p>
         <div className="bg-muted/50 rounded-lg p-4 border font-mono text-sm">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="bg-blue-500 text-white px-2 py-1 rounded">Input</span>
+            <span className="bg-blue-500 text-white px-2 py-1 rounded">
+              Input
+            </span>
             <ArrowRight className="h-4 w-4" />
-            <span className="bg-purple-500 text-white px-2 py-1 rounded">AI (Summarize)</span>
+            <span className="bg-purple-500 text-white px-2 py-1 rounded">
+              AI (Summarize)
+            </span>
             <ArrowRight className="h-4 w-4" />
-            <span className="bg-purple-600 text-white px-2 py-1 rounded">Integration (Slack)</span>
+            <span className="bg-purple-600 text-white px-2 py-1 rounded">
+              Integration (Slack)
+            </span>
             <ArrowRight className="h-4 w-4" />
-            <span className="bg-red-500 text-white px-2 py-1 rounded">Output</span>
+            <span className="bg-red-500 text-white px-2 py-1 rounded">
+              Output
+            </span>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          The Integration node sends the AI's summary to a Slack channel using your connected Slack account.
+          The Integration node sends the AI's summary to a Slack channel using
+          your connected Slack account.
         </p>
       </section>
 
@@ -529,21 +594,31 @@ function IntegrationsDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Security</h2>
         <p className="text-muted-foreground">
-          Your integration credentials are protected with enterprise-grade security:
+          Your integration credentials are protected with enterprise-grade
+          security:
         </p>
         <div className="bg-muted/50 rounded-lg p-4 border">
           <ul className="space-y-2 text-muted-foreground">
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>AES-256 encryption</strong> - All credentials are encrypted at rest</span>
+              <span>
+                <strong>AES-256 encryption</strong> - All credentials are
+                encrypted at rest
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>OAuth2 tokens</strong> - We never store your passwords, only secure tokens</span>
+              <span>
+                <strong>OAuth2 tokens</strong> - We never store your passwords,
+                only secure tokens
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Revoke anytime</strong> - Disconnect integrations instantly from your dashboard</span>
+              <span>
+                <strong>Revoke anytime</strong> - Disconnect integrations
+                instantly from your dashboard
+              </span>
             </li>
           </ul>
         </div>
@@ -569,7 +644,10 @@ function IntegrationCard({
       </div>
       <div className="flex flex-wrap gap-1">
         {actions.map((action) => (
-          <span key={action} className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+          <span
+            key={action}
+            className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded"
+          >
             {action}
           </span>
         ))}
@@ -592,16 +670,18 @@ function ApiDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Authentication</h2>
         <p className="text-muted-foreground">
-          All API requests require an API key. Create one in the Integrations panel.
+          All API requests require an API key. Create one in the Integrations
+          panel.
         </p>
         <CodeBlock
           title="Include your API key in requests"
-          code={`curl -X GET https://your-domain.com/api/v1/workflows \\
+          code={`curl -X GET https://app.flowys.com/api/v1/workflows \\
   -H "Authorization: Bearer ask_your_api_key_here"`}
         />
         <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            <strong>Keep your API key secret!</strong> Never expose it in client-side code or public repositories.
+            <strong>Keep your API key secret!</strong> Never expose it in
+            client-side code or public repositories.
           </p>
         </div>
       </section>
@@ -610,7 +690,8 @@ function ApiDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Rate Limits</h2>
         <p className="text-muted-foreground">
-          Default: 60 requests per minute. Check response headers for your current limit:
+          Default: 60 requests per minute. Check response headers for your
+          current limit:
         </p>
         <div className="bg-muted rounded-lg p-4 font-mono text-sm">
           <p>X-RateLimit-Limit: 60</p>
@@ -719,23 +800,35 @@ function ApiDocs() {
             <tbody className="divide-y">
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">workflows:read</td>
-                <td className="px-4 py-2 text-muted-foreground">View workflow details</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  View workflow details
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">workflows:write</td>
-                <td className="px-4 py-2 text-muted-foreground">Create and update workflows</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Create and update workflows
+                </td>
               </tr>
               <tr>
-                <td className="px-4 py-2 font-mono text-xs">workflows:execute</td>
-                <td className="px-4 py-2 text-muted-foreground">Run workflows via API</td>
+                <td className="px-4 py-2 font-mono text-xs">
+                  workflows:execute
+                </td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Run workflows via API
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">executions:read</td>
-                <td className="px-4 py-2 text-muted-foreground">View execution history</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  View execution history
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">full_access</td>
-                <td className="px-4 py-2 text-muted-foreground">All permissions</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  All permissions
+                </td>
               </tr>
             </tbody>
           </table>
@@ -759,7 +852,8 @@ function WebhookDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Overview</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Webhooks allow two-way communication between Flowys and external services:
+          Webhooks allow two-way communication between Flowys and external
+          services:
         </p>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="border rounded-lg p-4">
@@ -768,7 +862,8 @@ function WebhookDocs() {
               Incoming Webhooks
             </h3>
             <p className="text-sm text-muted-foreground">
-              External services can trigger your workflows by sending data to a unique URL.
+              External services can trigger your workflows by sending data to a
+              unique URL.
             </p>
           </div>
           <div className="border rounded-lg p-4">
@@ -777,7 +872,8 @@ function WebhookDocs() {
               Outgoing Webhooks
             </h3>
             <p className="text-sm text-muted-foreground">
-              Flowys sends data to external services when workflows complete or events occur.
+              Flowys sends data to external services when workflows complete or
+              events occur.
             </p>
           </div>
         </div>
@@ -787,13 +883,18 @@ function WebhookDocs() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold">Incoming Webhooks</h2>
         <p className="text-muted-foreground">
-          Trigger workflows from external services like Zapier, Make, or your own applications.
+          Trigger workflows from external services like Zapier, Make, or your
+          own applications.
         </p>
 
         <h3 className="text-lg font-medium mt-6">Setup</h3>
         <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-          <li>Go to <strong>Integrations</strong> in the app header</li>
-          <li>Click <strong>Add Webhook</strong> and select "Incoming"</li>
+          <li>
+            Go to <strong>Integrations</strong> in the app header
+          </li>
+          <li>
+            Click <strong>Add Webhook</strong> and select "Incoming"
+          </li>
           <li>Choose which workflow to trigger</li>
           <li>Copy the generated URL and secret</li>
         </ol>
@@ -801,7 +902,7 @@ function WebhookDocs() {
         <h3 className="text-lg font-medium mt-6">Triggering</h3>
         <CodeBlock
           title="Send a POST request to trigger the workflow"
-          code={`curl -X POST https://your-domain.com/api/webhooks/incoming/abc123xyz \\
+          code={`curl -X POST https://app.flowys.com/api/webhooks/incoming/abc123xyz \\
   -H "Content-Type: application/json" \\
   -H "X-Webhook-Signature: sha256=..." \\
   -d '{"text": "Process this data"}'`}
@@ -845,24 +946,38 @@ const signature = "sha256=" + crypto
             </thead>
             <tbody className="divide-y">
               <tr>
-                <td className="px-4 py-2 font-mono text-xs">workflow.started</td>
-                <td className="px-4 py-2 text-muted-foreground">Workflow execution began</td>
+                <td className="px-4 py-2 font-mono text-xs">
+                  workflow.started
+                </td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Workflow execution began
+                </td>
               </tr>
               <tr>
-                <td className="px-4 py-2 font-mono text-xs">workflow.completed</td>
-                <td className="px-4 py-2 text-muted-foreground">Workflow finished successfully</td>
+                <td className="px-4 py-2 font-mono text-xs">
+                  workflow.completed
+                </td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Workflow finished successfully
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">workflow.failed</td>
-                <td className="px-4 py-2 text-muted-foreground">Workflow encountered an error</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Workflow encountered an error
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">node.completed</td>
-                <td className="px-4 py-2 text-muted-foreground">Individual node finished</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Individual node finished
+                </td>
               </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-xs">node.failed</td>
-                <td className="px-4 py-2 text-muted-foreground">Individual node failed</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  Individual node failed
+                </td>
               </tr>
             </tbody>
           </table>
@@ -888,7 +1003,8 @@ const signature = "sha256=" + crypto
 
         <h3 className="text-lg font-medium mt-6">Retry Policy</h3>
         <p className="text-muted-foreground">
-          Failed webhook deliveries are automatically retried with exponential backoff:
+          Failed webhook deliveries are automatically retried with exponential
+          backoff:
         </p>
         <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-2">
           <li>Attempt 1: Immediate</li>
@@ -921,13 +1037,23 @@ function StepCard({
       <div className="flex-1 space-y-2">
         <h3 className="text-lg font-semibold">{title}</h3>
         <p className="text-muted-foreground">{description}</p>
-        {children && <div className="mt-3 bg-muted/50 rounded-lg p-3 border">{children}</div>}
+        {children && (
+          <div className="mt-3 bg-muted/50 rounded-lg p-3 border">
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function TipCard({ title, description }: { title: string; description: string }) {
+function TipCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="border rounded-lg p-4 bg-muted/30">
       <h4 className="font-medium mb-1">{title}</h4>
@@ -954,7 +1080,12 @@ function NodeDocCard({
   return (
     <div className="border rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-3">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", color)}>
+        <div
+          className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center",
+            color
+          )}
+        >
           <Icon className="h-5 w-5 text-white" />
         </div>
         <h3 className="text-xl font-semibold">{name}</h3>
@@ -1012,7 +1143,12 @@ function ApiEndpoint({
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="bg-muted px-4 py-3 flex items-center gap-3">
-        <span className={cn("px-2 py-1 rounded text-xs font-bold text-white", methodColors[method])}>
+        <span
+          className={cn(
+            "px-2 py-1 rounded text-xs font-bold text-white",
+            methodColors[method]
+          )}
+        >
           {method}
         </span>
         <code className="text-sm font-medium">{path}</code>
@@ -1020,9 +1156,14 @@ function ApiEndpoint({
       <div className="p-4 space-y-4">
         <p className="text-muted-foreground">{description}</p>
         <div className="flex gap-2">
-          <span className="text-sm text-muted-foreground">Required scopes:</span>
+          <span className="text-sm text-muted-foreground">
+            Required scopes:
+          </span>
           {scopes.map((scope) => (
-            <span key={scope} className="text-xs bg-muted px-2 py-1 rounded font-mono">
+            <span
+              key={scope}
+              className="text-xs bg-muted px-2 py-1 rounded font-mono"
+            >
               {scope}
             </span>
           ))}
