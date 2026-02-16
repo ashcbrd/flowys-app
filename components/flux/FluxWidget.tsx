@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Sparkles, Loader2, Bot, Zap, AlertTriangle, CheckCircle, Wand2, Lock } from "lucide-react";
+import { X, Send, Sparkles, Loader2, Bot, Zap, AlertTriangle, CheckCircle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore, type NodeType, type GeneratedWorkflow } from "@/store/workflow";
 import { useToast } from "@/hooks/use-toast";
-import { useUpgradeModal } from "@/components/shared/UpgradeModal";
-
-type PlanType = "free" | "builder" | "team";
 
 interface FixAction {
   type: string;
@@ -86,7 +83,6 @@ export function FluxWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [userPlan, setUserPlan] = useState<PlanType>("free");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const {
@@ -100,25 +96,6 @@ export function FluxWidget() {
     createWorkflow,
   } = useWorkflowStore();
   const { toast } = useToast();
-  const { openUpgradeModal } = useUpgradeModal();
-
-  // Fetch user's subscription plan
-  useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const res = await fetch("/api/subscription");
-        if (res.ok) {
-          const data = await res.json();
-          setUserPlan(data.subscription?.plan || "free");
-        }
-      } catch {
-        setUserPlan("free");
-      }
-    };
-    fetchPlan();
-  }, []);
-
-  const isLocked = userPlan === "free";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,32 +103,19 @@ export function FluxWidget() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      if (isLocked) {
-        // Free tier message
-        setMessages([
-          {
-            role: "assistant",
-            content:
-              "Hey! I'm Flux, your AI workflow assistant. I can create workflows for you, help you debug issues, and answer questions about building automations.\n\nI'd love to help you, but I'm only available on the Builder and Team plans. Upgrade your plan and I'll be ready to create amazing workflows with you!",
-            suggestions: [],
-          },
-        ]);
-      } else {
-        // Paid tier message
-        setMessages([
-          {
-            role: "assistant",
-            content:
-              "Hey! I'm Flux, your workflow assistant. I can create workflows for you, help you debug issues, and answer questions. Try asking me to create a workflow!",
-            suggestions: DEFAULT_SUGGESTIONS,
-          },
-        ]);
-      }
+      setMessages([
+        {
+          role: "assistant",
+          content:
+            "Hey! I'm Flux, your workflow assistant. I can create workflows for you, help you debug issues, and answer questions. Try asking me to create a workflow!",
+          suggestions: DEFAULT_SUGGESTIONS,
+        },
+      ]);
     }
-    if (isOpen && !isLocked) {
+    if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, messages.length, isLocked]);
+  }, [isOpen, messages.length]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -367,9 +331,6 @@ export function FluxWidget() {
         >
           <Bot className="h-5 w-5" />
           <span className="font-medium">Ask Flux</span>
-          {isLocked && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 font-bold">PRO</span>
-          )}
         </button>
       )}
 
@@ -548,62 +509,36 @@ export function FluxWidget() {
 
           {/* Input Area */}
           <div className="p-4 border-t bg-muted/30">
-            {isLocked ? (
-              // Free tier - show upgrade prompt
-              <div className="text-center space-y-3">
-                <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
-                  <Lock className="h-4 w-4" />
-                  <span className="text-sm font-medium">Upgrade to unlock Flux</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    openUpgradeModal();
-                  }}
-                  className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium transition-all"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Upgrade Now
-                </button>
-                <p className="text-[10px] text-muted-foreground">
-                  Get AI-powered workflow creation, debugging, and more
-                </p>
-              </div>
-            ) : (
-              // Paid tier - show input
-              <>
-                <div className="flex gap-2 items-end">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask me to create a workflow..."
-                    disabled={isLoading}
-                    rows={1}
-                    className={cn(
-                      "flex-1 resize-none rounded-xl border bg-background px-4 py-3 text-sm",
-                      "focus:outline-none focus:ring-2 focus:ring-primary",
-                      "placeholder:text-muted-foreground",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                      "max-h-32"
-                    )}
-                    style={{ minHeight: "44px" }}
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => sendMessage(input)}
-                    disabled={!input.trim() || isLoading}
-                    className="h-11 w-11 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground text-center mt-2">
-                  Try: "Create a workflow that summarizes articles"
-                </p>
-              </>
-            )}
+            <div className="flex gap-2 items-end">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me to create a workflow..."
+                disabled={isLoading}
+                rows={1}
+                className={cn(
+                  "flex-1 resize-none rounded-xl border bg-background px-4 py-3 text-sm",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
+                  "placeholder:text-muted-foreground",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "max-h-32"
+                )}
+                style={{ minHeight: "44px" }}
+              />
+              <Button
+                size="icon"
+                onClick={() => sendMessage(input)}
+                disabled={!input.trim() || isLoading}
+                className="h-11 w-11 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center mt-2">
+              Try: "Create a workflow that summarizes articles"
+            </p>
           </div>
         </div>
       )}

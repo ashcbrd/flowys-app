@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, Workflow, Execution, Webhook, ApiKey, Schedule, Connection } from "@/lib/db";
-import { Subscription } from "@/lib/db/models/Subscription";
+import { connectToDatabase, Workflow, Execution, Webhook, ApiKey, Schedule, Connection, UserCredits } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 /**
@@ -63,13 +62,11 @@ export async function DELETE(request: NextRequest) {
     // Note: These are user-specific - need to add userId to Connection model if not present
     // For now, connections are global, so we skip this
 
-    // 7. Delete subscription
-    const subscriptionResult = await Subscription.deleteMany({ userId: user.id });
-    deletionResults.subscriptions = subscriptionResult.deletedCount;
+    // 7. Delete credits state
+    const userCreditsResult = await UserCredits.deleteMany({ userId: user.id });
+    deletionResults.userCredits = userCreditsResult.deletedCount;
 
-    // 8. Delete user account from NextAuth
-    // This is handled by the MongoDB adapter's deleteUser method
-    // We need to import the User model from NextAuth
+    // 8. Authentication account cleanup can be handled separately if needed
 
     // Log deletion for audit purposes (in production, store this in an audit log)
     console.log(`Account deletion completed for user ${user.id}:`, deletionResults);
@@ -110,6 +107,7 @@ export async function GET() {
       webhooks: await Webhook.countDocuments({ workflowId: { $in: workflowIds } }),
       schedules: await Schedule.countDocuments({ workflowId: { $in: workflowIds } }),
       apiKeys: await ApiKey.countDocuments({ userId: user.id }),
+      userCredits: await UserCredits.countDocuments({ userId: user.id }),
     };
 
     return NextResponse.json({

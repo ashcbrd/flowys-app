@@ -13,8 +13,6 @@ import {
   X,
   Play,
   ChevronRight,
-  Lock,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow";
-import Link from "next/link";
 
 interface OutputModalData {
   nodeName: string;
@@ -274,7 +271,7 @@ export function ExecutionDrawer() {
                 )}
               </div>
 
-              {/* Error Analysis Section - Premium Feature */}
+              {/* Error Analysis Section */}
               {lastExecution.errorAnalysis && (
                 <div className="mt-4 space-y-3">
                   {/* Summary */}
@@ -330,36 +327,6 @@ export function ExecutionDrawer() {
                       </p>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Upgrade Prompt for Free Users - Show when there's an error but no analysis */}
-              {lastExecution.status === "failed" && lastExecution.error && !lastExecution.errorAnalysis && (
-                <div className="mt-4 p-4 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 border border-violet-200 dark:border-violet-800 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-violet-100 dark:bg-violet-900/50 rounded-lg">
-                      <Sparkles className="h-5 w-5 text-violet-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-sm font-semibold text-violet-900 dark:text-violet-100">
-                          Get Smart Error Analysis
-                        </h4>
-                        <span className="text-[10px] px-1.5 py-0.5 bg-violet-600 text-white rounded font-medium">
-                          PRO
-                        </span>
-                      </div>
-                      <p className="text-sm text-violet-700 dark:text-violet-300 mb-3">
-                        Upgrade to Builder or Team to unlock AI-powered error analysis with possible causes and step-by-step fixes.
-                      </p>
-                      <Link href="/pricing">
-                        <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                          <Lock className="h-3 w-3 mr-1.5" />
-                          Upgrade Now
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>

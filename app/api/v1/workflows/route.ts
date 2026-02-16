@@ -36,13 +36,13 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    const workflows = await Workflow.find()
+    const workflows = await Workflow.find({ userId: authResult.apiKey!.userId })
       .sort({ updatedAt: -1 })
       .skip(offset)
       .limit(limit)
       .lean();
 
-    const total = await Workflow.countDocuments();
+    const total = await Workflow.countDocuments({ userId: authResult.apiKey!.userId });
 
     return NextResponse.json({
       data: workflows.map((w) => ({
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     const workflow = await Workflow.create({
+      userId: authResult.apiKey!.userId,
       name,
       description,
       nodes,

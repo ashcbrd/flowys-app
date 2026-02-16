@@ -472,16 +472,6 @@ function IntegrationsDocs() {
             authType="Basic Auth"
             actions={["Send SMS", "Make Call", "WhatsApp", "Phone Lookup"]}
           />
-          <IntegrationCard
-            name="Stripe"
-            authType="API Key"
-            actions={[
-              "Create Customer",
-              "Payment Intent",
-              "Subscription",
-              "Refund",
-            ]}
-          />
         </div>
       </section>
 

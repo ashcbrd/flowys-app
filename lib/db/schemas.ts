@@ -37,10 +37,6 @@ export interface IWorkflow {
   description?: string;
   nodes: NodeData[];
   edges: EdgeData[];
-  // Purchase tracking - system controlled, cannot be set via API
-  isPurchased?: boolean;
-  purchaseId?: string;
-  originalListingId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -132,10 +128,6 @@ const WorkflowSchema = new Schema<IWorkflow>(
     description: { type: String, maxlength: 500 },
     nodes: { type: [NodeDataSchema], required: true, default: [] },
     edges: { type: [EdgeDataSchema], required: true, default: [] },
-    // Purchase tracking - system controlled fields
-    isPurchased: { type: Boolean, default: false },
-    purchaseId: { type: String, ref: "Purchase" },
-    originalListingId: { type: String, ref: "MarketplaceListing" },
   },
   {
     timestamps: true,

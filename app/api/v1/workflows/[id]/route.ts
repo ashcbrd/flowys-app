@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const workflow = await Workflow.findById(id).lean();
+    const workflow = await Workflow.findOne({ _id: id, userId: authResult.apiKey!.userId }).lean();
 
     if (!workflow) {
       return createApiErrorResponse("Workflow not found", 404);
@@ -84,8 +84,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (nodes !== undefined) update.nodes = nodes;
     if (edges !== undefined) update.edges = edges;
 
-    const workflow = await Workflow.findByIdAndUpdate(
-      id,
+    const workflow = await Workflow.findOneAndUpdate(
+      { _id: id, userId: authResult.apiKey!.userId },
       { $set: update },
       { new: true }
     ).lean();
@@ -134,7 +134,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const workflow = await Workflow.findByIdAndDelete(id);
+    const workflow = await Workflow.findOneAndDelete({ _id: id, userId: authResult.apiKey!.userId });
 
     if (!workflow) {
       return createApiErrorResponse("Workflow not found", 404);

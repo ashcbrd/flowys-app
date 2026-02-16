@@ -4,7 +4,6 @@ export interface Workflow {
   description?: string;
   nodes: NodeData[];
   edges: EdgeData[];
-  isPurchased?: boolean;
   createdAt: string;
   updatedAt: string;
 }

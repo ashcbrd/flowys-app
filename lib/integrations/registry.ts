@@ -11,7 +11,6 @@ import { GitHubIntegration } from "./providers/github";
 import { OpenAIIntegration } from "./providers/openai";
 import { SendGridIntegration } from "./providers/sendgrid";
 import { TwilioIntegration } from "./providers/twilio";
-import { StripeIntegration } from "./providers/stripe";
 
 /**
  * Central registry for all available integrations
@@ -30,7 +29,6 @@ class IntegrationRegistry {
     this.register(new OpenAIIntegration());
     this.register(new SendGridIntegration());
     this.register(new TwilioIntegration());
-    this.register(new StripeIntegration());
   }
 
   /**

@@ -4,20 +4,12 @@ import Link from "next/link";
 import {
   Webhook,
   Key,
-  CreditCard,
   ChevronRight,
   Settings,
 } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 
 const settingsPages = [
-  {
-    title: "Subscription",
-    description: "Manage your plan, view credit usage, and billing details",
-    href: "/settings/subscription",
-    icon: CreditCard,
-    color: "from-blue-500 to-indigo-600",
-  },
   {
     title: "Webhooks",
     description: "Configure incoming and outgoing webhooks for automation",
@@ -44,7 +36,7 @@ export default function SettingsPage() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">Settings</h2>
           <p className="text-muted-foreground">
-            Manage your account, subscription, and integrations
+            Manage your account and integrations
           </p>
         </div>
 

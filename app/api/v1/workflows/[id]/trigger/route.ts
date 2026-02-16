@@ -4,12 +4,7 @@ import { connectToDatabase, Workflow, Execution } from "@/lib/db";
 import { authenticateApiKey, createApiErrorResponse } from "@/lib/middleware/apiAuth";
 import { WorkflowExecutor } from "@/lib/engine/executor";
 import { triggerWebhooks } from "@/lib/services/webhookService";
-import {
-  hasEnoughCredits,
-  deductCredits,
-  validateWorkflowAgainstPlan,
-  calculateWorkflowCost,
-} from "@/lib/subscription";
+import { hasEnoughCredits, deductCredits, calculateWorkflowCost } from "@/lib/credits";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -79,16 +74,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Validate workflow against plan limits (node types, node count)
-    const validation = await validateWorkflowAgainstPlan(workflow.userId, workflow.nodes);
-    if (!validation.valid) {
-      return createApiErrorResponse(
-        `Plan limit exceeded: ${validation.errors.join(", ")}`,
-        403
-      );
-    }
-
-    // Check if user has enough credits
     const creditCheck = await hasEnoughCredits(workflow.userId, workflow.nodes);
     if (!creditCheck.hasCredits) {
       return createApiErrorResponse(
@@ -156,8 +141,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const result = await executor.execute(input);
 
       const duration = Date.now() - startTime;
-
-      // Deduct credits after execution
       const creditCost = calculateWorkflowCost(workflow.nodes);
       const deduction = await deductCredits(workflow.userId, creditCost);
 
@@ -254,8 +237,6 @@ async function executeWorkflowAsync(
   try {
     const executor = new WorkflowExecutor(workflow.nodes, workflow.edges);
     const result = await executor.execute(input);
-
-    // Deduct credits after execution
     const creditCost = calculateWorkflowCost(workflow.nodes);
     await deductCredits(workflow.userId, creditCost);
 

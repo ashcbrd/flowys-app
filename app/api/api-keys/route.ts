@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, ApiKey, generateApiKey, type ApiKeyScope } from "@/lib/db";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 const VALID_SCOPES: ApiKeyScope[] = [
   "workflows:read",
@@ -14,9 +15,14 @@ const VALID_SCOPES: ApiKeyScope[] = [
 // GET /api/api-keys - List all API keys
 export async function GET() {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
-    const apiKeys = await ApiKey.find()
+    const apiKeys = await ApiKey.find({ userId: user.id })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -51,6 +57,11 @@ export async function GET() {
 // POST /api/api-keys - Create a new API key
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const body = await request.json();
@@ -94,6 +105,7 @@ export async function POST(request: NextRequest) {
     const { key, prefix, hash } = generateApiKey();
 
     const apiKey = await ApiKey.create({
+      userId: user.id,
       name,
       description,
       keyPrefix: prefix,
