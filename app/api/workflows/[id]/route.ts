@@ -3,7 +3,6 @@ import { z } from "zod";
 import { connectToDatabase, Workflow, type NodeData, type EdgeData } from "@/lib/db";
 import { validateNodeConfig } from "@/lib/nodes";
 import { getAuthenticatedUser, verifyWorkflowOwnership } from "@/lib/auth-helpers";
-import { validateWorkflowAgainstPlan } from "@/lib/subscription";
 
 const NodeSchema = z.object({
   id: z.string(),
@@ -56,7 +55,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       description: workflow.description,
       nodes: workflow.nodes,
       edges: workflow.edges,
-      isPurchased: workflow.isPurchased || false,
       createdAt: workflow.createdAt,
       updatedAt: workflow.updatedAt,
     });
@@ -96,22 +94,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { name, description, nodes, edges } = parsed.data;
 
-    // Validate nodes against plan limits
-    // Purchased workflows bypass node type restrictions
-    const planValidation = await validateWorkflowAgainstPlan(user.id, nodes as NodeData[], {
-      isPurchased: existing.isPurchased === true,
-    });
-    if (!planValidation.valid) {
-      return NextResponse.json(
-        {
-          error: "Plan limit exceeded",
-          details: planValidation.errors,
-          code: "PLAN_LIMIT_EXCEEDED",
-        },
-        { status: 403 }
-      );
-    }
-
     for (const node of nodes) {
       const validation = validateNodeConfig(node.type, node.data.config);
       if (!validation.valid) {
@@ -142,7 +124,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       description: workflow!.description,
       nodes: workflow!.nodes,
       edges: workflow!.edges,
-      isPurchased: workflow!.isPurchased || false,
       createdAt: workflow!.createdAt,
       updatedAt: workflow!.updatedAt,
     });

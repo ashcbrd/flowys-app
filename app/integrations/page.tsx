@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   Plug,
   Plus,
@@ -16,8 +15,6 @@ import {
   AlertTriangle,
   Play,
   CheckCircle,
-  Lock,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +45,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/shared/Navbar";
 import { cn } from "@/lib/utils";
-import { useUpgradeModal } from "@/components/shared/UpgradeModal";
-
-type PlanType = "free" | "builder" | "team";
 
 interface IntegrationConfig {
   id: string;
@@ -114,16 +108,12 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function IntegrationsPage() {
-  const router = useRouter();
   const [integrations, setIntegrations] = useState<IntegrationDefinition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("available");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [userPlan, setUserPlan] = useState<PlanType | null>(null);
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const { openUpgradeModal } = useUpgradeModal();
 
   // Connection dialogs
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
@@ -144,34 +134,10 @@ export default function IntegrationsPage() {
 
   const { toast } = useToast();
 
-  // Check user plan access
   useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        const res = await fetch("/api/subscription");
-        if (res.ok) {
-          const data = await res.json();
-          const plan = data.subscription?.plan || "free";
-          setUserPlan(plan);
-          if (plan === "free") {
-            setCheckingAccess(false);
-            return;
-          }
-        }
-      } catch {
-        setUserPlan("free");
-      }
-      setCheckingAccess(false);
-    };
-    checkAccess();
+    fetchIntegrations();
+    fetchConnections();
   }, []);
-
-  useEffect(() => {
-    if (userPlan && userPlan !== "free") {
-      fetchIntegrations();
-      fetchConnections();
-    }
-  }, [userPlan]);
 
   const fetchIntegrations = async () => {
     try {
@@ -416,52 +382,6 @@ export default function IntegrationsPage() {
 
   const getConnectionCount = (integrationId: string) =>
     connections.filter((c) => c.integrationId === integrationId).length;
-
-  // Show loading while checking access
-  if (checkingAccess) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar title="App Integrations" icon={Plug} />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
-
-  // Show upgrade prompt for free users
-  if (userPlan === "free") {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar title="App Integrations" icon={Plug} />
-        <main className="max-w-2xl mx-auto px-6 py-16">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mx-auto mb-6">
-              <Lock className="h-10 w-10 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">App Integrations Require an Upgrade</h1>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              App Integrations are available on the Builder and Team plans. Upgrade to connect Slack, GitHub, Gmail, and more to your workflows.
-            </p>
-            <Button
-              onClick={openUpgradeModal}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Upgrade Now
-            </Button>
-            <Button
-              variant="outline"
-              className="ml-3"
-              onClick={() => router.push("/workflow")}
-            >
-              Back to Editor
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">

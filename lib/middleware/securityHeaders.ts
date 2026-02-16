@@ -34,7 +34,6 @@ const cspDirectives = {
     "https://api.anthropic.com",
     "https://accounts.google.com",
     process.env.NEXT_PUBLIC_APP_URL || "",
-    process.env.NEXT_PUBLIC_MARKETPLACE_URL || "",
     process.env.NEXT_PUBLIC_LANDING_URL || "",
   ].filter(Boolean),
   "frame-src": [

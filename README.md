@@ -12,7 +12,6 @@ This is the core application where users build, manage, and execute AI workflows
 - AI node integrations (OpenAI, Anthropic)
 - Webhook triggers and scheduling
 - Third-party integrations
-- Subscription management
 - API key management
 
 ## Tech Stack
@@ -39,7 +38,6 @@ workflow-app/
 │   ├── integrations/         # Integration connections
 │   ├── settings/
 │   │   ├── page.tsx          # Settings overview
-│   │   ├── subscription/     # Subscription management
 │   │   ├── api-keys/         # API key management
 │   │   └── webhooks/         # Webhook configuration
 │   ├── docs/                 # Documentation
@@ -53,8 +51,6 @@ workflow-app/
 │       ├── schedules/        # Scheduled workflows
 │       ├── webhooks/         # Webhook handling
 │       ├── api-keys/         # API key management
-│       ├── subscription/     # Subscription status
-│       ├── billing/          # Payment checkout
 │       ├── nodes/            # Node testing
 │       ├── flux/             # AI assistant
 │       ├── v1/               # Public API
@@ -77,8 +73,6 @@ workflow-app/
 │   ├── nodes/                # Node definitions
 │   ├── integrations/         # Integration handlers
 │   ├── services/             # Business logic services
-│   ├── subscription/         # Subscription utilities
-│   ├── payments/             # Payment processing
 │   ├── providers/            # AI provider clients
 │   ├── auth.ts               # NextAuth configuration
 │   ├── utils.ts              # Utility functions
@@ -99,7 +93,6 @@ workflow-app/
 
 - Node.js 18+
 - MongoDB database
-- Google OAuth credentials (for authentication)
 
 ### Installation
 
@@ -124,8 +117,10 @@ MONGODB_URI=mongodb+srv://...
 
 # Authentication
 AUTH_SECRET=your-32-char-secret
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Fixed login account
+# Email: user@flowys.io
+# Password: @FLOWYS2025
 
 # Encryption (for storing integration credentials)
 ENCRYPTION_KEY=your-32-character-key
@@ -134,14 +129,12 @@ ENCRYPTION_KEY=your-32-character-key
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Payments
-DODO_PAYMENTS_ENVIRONMENT=test_mode
-DODO_PAYMENTS_API_KEY_TEST=...
-DODO_WEBHOOK_SECRET_TEST=...
+# Integration OAuth
+GOOGLE_SHEETS_CLIENT_ID=your-sheets-client-id
+GOOGLE_SHEETS_CLIENT_SECRET=your-sheets-client-secret
 
 # Cross-domain URLs
 NEXT_PUBLIC_APP_URL=https://app.flowys.io
-NEXT_PUBLIC_MARKETPLACE_URL=https://marketplace.flowys.io
 NEXT_PUBLIC_LANDING_URL=https://flowys.io
 ```
 
@@ -189,14 +182,6 @@ npm start
 | `GET /api/executions` | List executions |
 | `GET /api/v1/workflows/[id]/trigger` | Public trigger API |
 
-### Subscription Plans
-
-| Plan | Workflows | Nodes | Credits | Features |
-|------|-----------|-------|---------|----------|
-| Free | 3 | 4 | 100/mo | Basic nodes |
-| Builder | 10 | 25 | 500-50k | AI nodes, webhooks, integrations |
-| Team | Unlimited | Unlimited | 500-50k | Collaboration, priority support |
-
 ## Database Models
 
 - `User` - User accounts
@@ -206,11 +191,16 @@ npm start
 - `Connection` - Integration credentials
 - `Schedule` - Scheduled executions
 - `ApiKey` - User API keys
-- `Subscription` - User subscriptions
+- `UserCredits` - User credit balances
 
 ## Authentication
 
-Uses NextAuth.js with Google OAuth. Protected routes require authentication via middleware.
+Uses NextAuth.js credentials auth with one fixed account:
+
+- Email: `user@flowys.io`
+- Password: `@FLOWYS2025`
+
+Protected routes require authentication via middleware.
 
 ## Deployment
 

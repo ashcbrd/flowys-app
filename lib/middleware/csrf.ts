@@ -15,9 +15,6 @@ function getAllowedOrigins(): string[] {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     origins.push(new URL(process.env.NEXT_PUBLIC_APP_URL).origin);
   }
-  if (process.env.NEXT_PUBLIC_MARKETPLACE_URL) {
-    origins.push(new URL(process.env.NEXT_PUBLIC_MARKETPLACE_URL).origin);
-  }
   if (process.env.NEXT_PUBLIC_LANDING_URL) {
     origins.push(new URL(process.env.NEXT_PUBLIC_LANDING_URL).origin);
   }
@@ -26,10 +23,8 @@ function getAllowedOrigins(): string[] {
   if (process.env.NODE_ENV === "development") {
     origins.push("http://localhost:3000");
     origins.push("http://localhost:3001");
-    origins.push("http://localhost:3002");
     origins.push("http://127.0.0.1:3000");
     origins.push("http://127.0.0.1:3001");
-    origins.push("http://127.0.0.1:3002");
   }
 
   return origins;

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import type { PlanType } from "@/lib/db/models/Subscription";
 import {
   Play,
   Save,
@@ -18,9 +17,6 @@ import {
   Clock,
   Calendar,
   Plug,
-  Settings,
-  ChevronDown,
-  Copy,
   Loader2,
   Check,
   Pencil,
@@ -29,14 +25,8 @@ import {
   User,
   Download,
   Upload,
-  CreditCard,
-  Crown,
-  Sparkles,
-  Zap,
   Webhook,
   Key,
-  Lock,
-  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +46,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkflowStore, type WorkflowStatus } from "@/store/workflow";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { WorkflowsDialog } from "./WorkflowsDialog";
 import { VersionsModal } from "./VersionsModal";
 import { ExecutionHistory } from "./ExecutionHistory";
@@ -98,46 +87,10 @@ export function Header() {
   const [schedulesOpen, setSchedulesOpen] = useState(false);
   const [runInput, setRunInput] = useState("{}");
   const [isSaving, setIsSaving] = useState(false);
-  const [userPlan, setUserPlan] = useState<PlanType>("free");
-  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
-  const [monthlyCredits, setMonthlyCredits] = useState<number | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const workflowName = workflow?.name || "Untitled Workflow";
-
-  // Fetch user subscription plan
-  const fetchSubscription = useCallback(async () => {
-    try {
-      const res = await fetch("/api/subscription");
-      if (res.ok) {
-        const data = await res.json();
-        setUserPlan(data.subscription?.plan || "free");
-        setCreditsRemaining(data.usage?.creditsRemaining ?? null);
-        setMonthlyCredits(data.usage?.monthlyCredits ?? null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch subscription:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (session?.user) {
-      fetchSubscription();
-    }
-  }, [session?.user, fetchSubscription]);
-
-  // Listen for credits update events (triggered after workflow execution)
-  useEffect(() => {
-    const handleCreditsUpdate = () => {
-      fetchSubscription();
-    };
-
-    window.addEventListener("credits-updated", handleCreditsUpdate);
-    return () => {
-      window.removeEventListener("credits-updated", handleCreditsUpdate);
-    };
-  }, [fetchSubscription]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -244,14 +197,6 @@ export function Header() {
   };
 
   const handleExport = () => {
-    if (userPlan === "free") {
-      toast({
-        title: "Upgrade Required",
-        description: "Export/Import requires a Builder plan or higher.",
-        variant: "destructive",
-      });
-      return;
-    }
     exportWorkflow();
     toast({
       title: "Exported",
@@ -260,23 +205,7 @@ export function Header() {
   };
 
   const handleImportClick = () => {
-    if (userPlan === "free") {
-      toast({
-        title: "Upgrade Required",
-        description: "Export/Import requires a Builder plan or higher.",
-        variant: "destructive",
-      });
-      return;
-    }
     importInputRef.current?.click();
-  };
-
-  // Check if feature requires paid plan
-  const isFeatureLocked = (feature: "importExport" | "integrations") => {
-    if (userPlan === "free") {
-      return true;
-    }
-    return false;
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,26 +390,6 @@ export function Header() {
             {isExecuting ? "Running..." : "Run"}
           </Button>
 
-          {/* Credits Display */}
-          {session?.user && creditsRemaining !== null && (
-            <Link
-              href="/settings/subscription"
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                "hover:bg-muted border",
-                creditsRemaining === 0
-                  ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
-                  : monthlyCredits && creditsRemaining / monthlyCredits < 0.2
-                  ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
-                  : "border-border bg-background text-foreground"
-              )}
-              title="Credits remaining"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              <span>{creditsRemaining.toLocaleString()}</span>
-            </Link>
-          )}
-
           {/* Theme Toggle */}
           <ThemeToggle />
 
@@ -491,21 +400,10 @@ export function Header() {
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={session.user.image || undefined} alt={session.user.name || "User"} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {session.user.name?.charAt(0).toUpperCase() || <User className="h-4 w-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  {/* Plan Badge */}
-                  {userPlan === "team" && (
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 shadow-sm ring-2 ring-background">
-                      <Crown className="h-2.5 w-2.5 text-white" />
-                    </span>
-                  )}
-                  {userPlan === "builder" && (
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm ring-2 ring-background">
-                      <Sparkles className="h-2.5 w-2.5 text-white" />
-                    </span>
-                  )}
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {session.user.name?.charAt(0).toUpperCase() || <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -542,24 +440,14 @@ export function Header() {
                     Version History
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={handleExport} className={isFeatureLocked("importExport") ? "opacity-60" : ""}>
+                <DropdownMenuItem onClick={handleExport}>
                   <Download className="h-4 w-4" />
                   Export Workflow
-                  {isFeatureLocked("importExport") && <Lock className="h-3 w-3 ml-auto text-amber-500" />}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleImportClick} className={isFeatureLocked("importExport") ? "opacity-60" : ""}>
+                <DropdownMenuItem onClick={handleImportClick}>
                   <Upload className="h-4 w-4" />
                   Import Workflow
-                  {isFeatureLocked("importExport") && <Lock className="h-3 w-3 ml-auto text-amber-500" />}
                 </DropdownMenuItem>
-                {currentWorkflowId && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/marketplace/seller/listings/new">
-                      <Store className="h-4 w-4" />
-                      Sell on Marketplace
-                    </Link>
-                  </DropdownMenuItem>
-                )}
 
                 <DropdownMenuSeparator />
 
@@ -584,29 +472,12 @@ export function Header() {
                 <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
                   Settings
                 </div>
-                {isFeatureLocked("integrations") ? (
-                  <DropdownMenuItem
-                    className="opacity-60"
-                    onClick={() => {
-                      toast({
-                        title: "Upgrade Required",
-                        description: "App Integrations require a Builder plan or higher.",
-                        variant: "destructive",
-                      });
-                    }}
-                  >
+                <DropdownMenuItem asChild>
+                  <Link href="/integrations">
                     <Plug className="h-4 w-4" />
                     App Integrations
-                    <Lock className="h-3 w-3 ml-auto text-amber-500" />
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/integrations">
-                      <Plug className="h-4 w-4" />
-                      App Integrations
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings/webhooks">
                     <Webhook className="h-4 w-4" />
@@ -619,13 +490,6 @@ export function Header() {
                     API Keys
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/subscription">
-                    <CreditCard className="h-4 w-4" />
-                    Subscription
-                  </Link>
-                </DropdownMenuItem>
-
                 <DropdownMenuSeparator />
 
                 {/* Help section */}

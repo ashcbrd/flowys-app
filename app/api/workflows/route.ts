@@ -4,7 +4,6 @@ import { z } from "zod";
 import { connectToDatabase, Workflow, type NodeData, type EdgeData } from "@/lib/db";
 import { validateNodeConfig } from "@/lib/nodes";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
-import { getUserPlanLimits, validateWorkflowAgainstPlan } from "@/lib/subscription";
 
 const NodeSchema = z.object({
   id: z.string(),
@@ -86,36 +85,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, description, nodes, edges } = parsed.data;
-
-    // Check workflow count limit
-    const workflowCount = await Workflow.countDocuments({ userId: user.id });
-    const { subscription, limits } = await getUserPlanLimits(user.id);
-
-    if (limits.maxWorkflows !== -1 && workflowCount >= limits.maxWorkflows) {
-      return NextResponse.json(
-        {
-          error: "Workflow limit reached",
-          details: `Your ${subscription.plan} plan allows up to ${limits.maxWorkflows} workflows. Upgrade to create more.`,
-          code: "WORKFLOW_LIMIT_REACHED",
-          current: workflowCount,
-          limit: limits.maxWorkflows,
-        },
-        { status: 403 }
-      );
-    }
-
-    // Validate nodes against plan (node types and count)
-    const planValidation = await validateWorkflowAgainstPlan(user.id, nodes as NodeData[]);
-    if (!planValidation.valid) {
-      return NextResponse.json(
-        {
-          error: "Plan limit exceeded",
-          details: planValidation.errors,
-          code: "PLAN_LIMIT_EXCEEDED",
-        },
-        { status: 403 }
-      );
-    }
 
     for (const node of nodes) {
       const validation = validateNodeConfig(node.type, node.data.config);

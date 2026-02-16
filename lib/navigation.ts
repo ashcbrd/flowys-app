@@ -16,19 +16,14 @@ const DOMAINS = {
     dev: process.env.NEXT_PUBLIC_APP_URL_DEV || "http://localhost:3001",
     prod: process.env.NEXT_PUBLIC_APP_URL || "https://app.flowys.io",
   },
-  marketplace: {
-    dev: process.env.NEXT_PUBLIC_MARKETPLACE_URL_DEV || "http://localhost:3002",
-    prod: process.env.NEXT_PUBLIC_MARKETPLACE_URL || "https://marketplace.flowys.io",
-  },
 } as const;
 
-type DomainKey = "landing" | "app" | "marketplace";
+type DomainKey = "landing" | "app";
 
 // Window names for tab reuse
 const WINDOW_NAMES: Record<DomainKey, string> = {
   landing: "flowys_landing",
   app: "flowys_app",
-  marketplace: "flowys_marketplace",
 };
 
 /**
@@ -61,7 +56,6 @@ export function getAllDomainUrls() {
   return {
     landing: getDomainUrl("landing"),
     app: getDomainUrl("app"),
-    marketplace: getDomainUrl("marketplace"),
   };
 }
 
@@ -71,12 +65,9 @@ export function getAllDomainUrls() {
 function detectDomain(url: string): DomainKey | null {
   const urlLower = url.toLowerCase();
 
-  // Check against configured domains (check app and marketplace first as they're subdomains)
+  // Check against configured domains
   if (urlLower.includes(DOMAINS.app.dev) || urlLower.includes(DOMAINS.app.prod)) {
     return "app";
-  }
-  if (urlLower.includes(DOMAINS.marketplace.dev) || urlLower.includes(DOMAINS.marketplace.prod)) {
-    return "marketplace";
   }
   if (urlLower.includes(DOMAINS.landing.dev) || urlLower.includes(DOMAINS.landing.prod)) {
     return "landing";
@@ -130,13 +121,6 @@ export function navigateToDomain(
  */
 export function navigateToApp(path: string = "/"): void {
   navigateToDomain("app", path);
-}
-
-/**
- * Navigate to the marketplace
- */
-export function navigateToMarketplace(path: string = "/"): void {
-  navigateToDomain("marketplace", path);
 }
 
 /**

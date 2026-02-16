@@ -21,4 +21,3 @@ export { GitHubIntegration } from "./providers/github";
 export { OpenAIIntegration } from "./providers/openai";
 export { SendGridIntegration } from "./providers/sendgrid";
 export { TwilioIntegration } from "./providers/twilio";
-export { StripeIntegration } from "./providers/stripe";

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, ApiKey, type ApiKeyScope } from "@/lib/db";
 import mongoose from "mongoose";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,6 +20,11 @@ const VALID_SCOPES: ApiKeyScope[] = [
 // GET /api/api-keys/[id] - Get a specific API key
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const apiKey = await ApiKey.findById(id).lean();
+    const apiKey = await ApiKey.findOne({ _id: id, userId: user.id }).lean();
 
     if (!apiKey) {
       return NextResponse.json(
@@ -68,6 +74,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/api-keys/[id] - Update an API key
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -124,7 +135,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const apiKey = await ApiKey.findByIdAndUpdate(
-      id,
+      { _id: id, userId: user.id },
       { $set: update },
       { new: true }
     ).lean();
@@ -165,6 +176,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/api-keys/[id] - Delete an API key
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -176,7 +192,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const apiKey = await ApiKey.findByIdAndDelete(id);
+    const apiKey = await ApiKey.findOneAndDelete({ _id: id, userId: user.id });
 
     if (!apiKey) {
       return NextResponse.json(
