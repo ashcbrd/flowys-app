@@ -119,3 +119,9 @@ export {
   AppRun,
   type IAppRun,
 } from "./models/AppRun";
+
+export {
+  Asset,
+  type IAsset,
+  type AssetKind,
+} from "./models/Asset";
