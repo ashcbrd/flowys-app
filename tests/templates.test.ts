@@ -18,7 +18,51 @@ vi.mock("@/lib/providers", () => ({
   executePrompt: (...args: unknown[]) => executePrompt(...args),
 }));
 
+// The marketing steps' effect seams. Image generation and asset storage are
+// stubbed; everything else in those steps (compositing with sharp against the
+// real scene files, palette derivation, email layout rendering) runs for
+// real, so the templates exercise the deterministic pipeline offline.
+const stubAssets = vi.hoisted(() => {
+  let counter = 0;
+  return {
+    // A real 1x1 PNG so sharp can decode what the "generated" logo hands on.
+    png: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      "base64"
+    ),
+    nextId: () => `00000000-0000-4000-8000-${String(++counter).padStart(12, "0")}`,
+  };
+});
+
+vi.mock("@/lib/providers/images", () => ({
+  generateImage: async () => ({
+    data: stubAssets.png,
+    contentType: "image/png" as const,
+    model: "gpt-image-1" as const,
+  }),
+}));
+
+vi.mock("@/lib/assets/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/assets/store")>();
+  return {
+    ...actual,
+    saveAsset: async (options: { contentType: string }) => {
+      const id = stubAssets.nextId();
+      const ext = options.contentType === "text/html" ? "html" : "png";
+      return { id, url: `/api/assets/${id}.${ext}` };
+    },
+    getOwnedAssetData: async () => ({
+      data: stubAssets.png,
+      contentType: "image/png",
+      kind: "image" as const,
+    }),
+  };
+});
+
 const { createExecutor } = await import("@/lib/engine/executor");
+
+/** Asset-owning steps fail closed without a run owner, so every run gets one. */
+const RUN_OWNER = { userId: "template-test-user" };
 
 /**
  * Templates now include API and webhook steps, which would make this suite hit
@@ -352,6 +396,15 @@ describe("every template is structurally sound", () => {
               return ["data", "count"];
           }
         }
+        if (node.type === "image") {
+          return ["assetId", "imageUrl", "imageMarkdown"];
+        }
+        if (node.type === "brand") {
+          return ["boardMarkdown", "primaryColor", "paletteHexes", "mockupCount"];
+        }
+        if (node.type === "email") {
+          return ["subject", "preheader", "emailHtml", "previewUrl", "previewMarkdown"];
+        }
         return [];
       };
 
@@ -396,7 +449,8 @@ describe("every template runs end to end", () => {
     async (_id, template) => {
       const executor = createExecutor(
         template.workflow.nodes as never,
-        template.workflow.edges as never
+        template.workflow.edges as never,
+        RUN_OWNER
       );
 
       const result = await executor.execute(stubInput(template));
@@ -411,7 +465,8 @@ describe("every template runs end to end", () => {
     async (_id, template) => {
       const executor = createExecutor(
         template.workflow.nodes as never,
-        template.workflow.edges as never
+        template.workflow.edges as never,
+        RUN_OWNER
       );
 
       const result = await executor.execute(stubInput(template));
@@ -426,7 +481,8 @@ describe("every template runs end to end", () => {
     async (_id, template) => {
       const executor = createExecutor(
         template.workflow.nodes as never,
-        template.workflow.edges as never
+        template.workflow.edges as never,
+        RUN_OWNER
       );
 
       const result = await executor.execute(stubInput(template));
@@ -445,9 +501,10 @@ describe("template failures are explained, not just reported", () => {
 
     const template = TEMPLATES[0];
     const executor = createExecutor(
-      template.workflow.nodes as never,
-      template.workflow.edges as never
-    );
+        template.workflow.nodes as never,
+        template.workflow.edges as never,
+        RUN_OWNER
+      );
 
     const result = await executor.execute(stubInput(template));
 
@@ -462,9 +519,10 @@ describe("template failures are explained, not just reported", () => {
 
     const template = TEMPLATES[0];
     const executor = createExecutor(
-      template.workflow.nodes as never,
-      template.workflow.edges as never
-    );
+        template.workflow.nodes as never,
+        template.workflow.edges as never,
+        RUN_OWNER
+      );
 
     const result = await executor.execute(stubInput(template));
 
@@ -477,9 +535,10 @@ describe("template failures are explained, not just reported", () => {
 
     const template = TEMPLATES[0];
     const executor = createExecutor(
-      template.workflow.nodes as never,
-      template.workflow.edges as never
-    );
+        template.workflow.nodes as never,
+        template.workflow.edges as never,
+        RUN_OWNER
+      );
 
     const result = await executor.execute(stubInput(template));
 

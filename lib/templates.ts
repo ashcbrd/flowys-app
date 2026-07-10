@@ -1270,6 +1270,607 @@ const TOPIC_PULSE: WorkflowTemplate = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Marketing helpers: the three step types the suite added.
+
+function picture(
+  id: string,
+  label: string,
+  col: number,
+  row: number,
+  opts: {
+    prompt: string;
+    size?: "square" | "wide" | "tall";
+    quality?: "draft" | "standard" | "best";
+    background?: "auto" | "transparent";
+  }
+) {
+  return {
+    id,
+    type: "image" as const,
+    position: at(col, row),
+    data: {
+      label,
+      config: {
+        promptTemplate: opts.prompt,
+        size: opts.size ?? "square",
+        quality: opts.quality ?? "standard",
+        background: opts.background ?? "auto",
+      },
+    },
+  };
+}
+
+function brandKit(
+  id: string,
+  label: string,
+  col: number,
+  row: number,
+  opts: { name: string; tagline?: string }
+) {
+  return {
+    id,
+    type: "brand" as const,
+    position: at(col, row),
+    data: {
+      label,
+      config: {
+        sourceTemplate: "{{assetId}}",
+        businessNameTemplate: opts.name,
+        taglineTemplate: opts.tagline ?? "",
+      },
+    },
+  };
+}
+
+function emailDesign(
+  id: string,
+  label: string,
+  col: number,
+  row: number,
+  opts: {
+    layout: "newsletter" | "promo" | "announcement";
+    subject: string;
+    preheader?: string;
+    heading: string;
+    body: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    brandColor?: string;
+    footer?: string;
+  }
+) {
+  return {
+    id,
+    type: "email" as const,
+    position: at(col, row),
+    data: {
+      label,
+      config: {
+        layout: opts.layout,
+        subjectTemplate: opts.subject,
+        preheaderTemplate: opts.preheader ?? "",
+        headingTemplate: opts.heading,
+        bodyTemplate: opts.body,
+        ctaTextTemplate: opts.ctaText ?? "",
+        ctaUrlTemplate: opts.ctaUrl ?? "",
+        brandColorTemplate: opts.brandColor ?? "",
+        footerTemplate: opts.footer ?? "",
+      },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+
+const AD_CREATIVE_PACK: WorkflowTemplate = {
+  id: "ad-creative-pack",
+  name: "Turn your brand material into a finished ad",
+  description:
+    "10 steps. Reads the brand material you paste in, writes three headlines and the primary text from your own claims, checks nothing was invented, and generates the ad image to match.",
+  category: "Marketing",
+  needs: "What you sell, who it's for, and a paste of your brand material",
+  workflow: {
+    nodes: [
+      ask("n1", "The brief", 0, 1, [
+        {
+          name: "product",
+          type: "string",
+          required: true,
+          label: "What are you selling?",
+          placeholder: "A booking tool for small salons, 29 euro a month",
+          multiline: true,
+        },
+        {
+          name: "audience",
+          type: "string",
+          required: true,
+          label: "Who is it for?",
+          placeholder: "Salon owners with two to ten chairs",
+        },
+        {
+          name: "offer",
+          type: "string",
+          label: "The offer",
+          placeholder: "20% off the first three months",
+          default: "no discount, lead with value",
+        },
+        {
+          name: "brandNotes",
+          type: "string",
+          required: true,
+          label: "Paste your brand material",
+          description:
+            "Your site copy, ads that worked, product facts, reviews. The copy is written only from what is in here.",
+          multiline: true,
+        },
+      ]),
+
+      think("n2", "Find the angle", 1, 0, {
+        system:
+          "You find the advertising angle inside a brand's own material. Everything you extract must appear in the material given. Never invent a claim, a number, or a customer.",
+        prompt:
+          "Product: {{product}}\nAudience: {{audience}}\n\nBrand material:\n\n{{brandNotes}}\n\nFind the angle.",
+        gives: {
+          tone: { type: "string", description: "The voice the material already speaks in, two or three words" },
+          allowedClaims: { type: "array", description: "Claims the material actually supports, verbatim where possible" },
+          hook: { type: "string", description: "The single most compelling true thing to lead with" },
+        },
+      }),
+
+      think("n3", "Write the copy", 1, 2, {
+        temperature: 0.6,
+        system:
+          "You write ad copy using only the claims you are given. If a line needs a claim that is not in the list, write a different line. Short sentences. No exclamation marks.",
+        prompt:
+          "Product: {{product}}\nAudience: {{audience}}\nOffer: {{offer}}\nTone: {{tone}}\nHook: {{hook}}\nClaims you may use:\n{{allowedClaims}}\n\nWrite the ad copy.",
+        gives: {
+          headlineA: { type: "string", description: "Headline leading with the hook, under 40 characters" },
+          headlineB: { type: "string", description: "Headline leading with the audience, under 40 characters" },
+          headlineC: { type: "string", description: "Headline leading with the offer, under 40 characters" },
+          primaryText: { type: "string", description: "Two or three short sentences of primary text" },
+          cta: { type: "string", description: "The call to action, three words or fewer" },
+        },
+      }),
+
+      think("n4", "Art direction", 1, 3, {
+        system:
+          "You write art direction for a single ad image. Describe one scene, its mood, its colours, and its composition. The image must contain no words, because generated lettering reads as a mistake.",
+        prompt:
+          "Product: {{product}}\nAudience: {{audience}}\nTone: {{tone}}\nHook: {{hook}}\n\nDescribe the ad image.",
+        gives: {
+          imagePrompt: {
+            type: "string",
+            description: "One paragraph an image model can paint from, ending with: no text, no words, no lettering",
+          },
+        },
+      }),
+
+      picture("n5", "Make the ad image", 2, 3, {
+        prompt: "{{imagePrompt}}",
+        size: "square",
+        quality: "standard",
+      }),
+
+      rule("n6", "Discount led?", 2, 0, "offer contains '%'"),
+
+      rename("n7", "Note the offer type", 3, 0, { discountLed: "branch" }),
+
+      think("n8", "Check the grounding", 2, 1, {
+        system:
+          "You audit ad copy against a list of permitted claims. A claim in the copy that is not supported by the list gets flagged. Judge the substance, not the phrasing.",
+        prompt:
+          "Permitted claims:\n{{allowedClaims}}\n\nCopy:\n{{primaryText}}\n\nAudit it.",
+        gives: {
+          groundedScore: { type: "number", description: "1 to 10, where 10 means every claim is supported" },
+          riskyClaims: { type: "array", description: "Lines worth a second look, or a single item saying all clear" },
+        },
+      }),
+
+      result(
+        "n9",
+        "The ad pack",
+        4,
+        1,
+        [
+          "# The ad pack",
+          "",
+          "{{imageMarkdown}}",
+          "",
+          "**Hook:** {{hook}} · tone **{{tone}}** · discount led: **{{discountLed}}**",
+          "",
+          "## Headlines",
+          "1. {{headlineA}}",
+          "2. {{headlineB}}",
+          "3. {{headlineC}}",
+          "",
+          "## Primary text",
+          "{{primaryText}}",
+          "",
+          "**Call to action:** {{cta}}",
+          "",
+          "## Grounding check",
+          "Score **{{groundedScore}}/10**. Worth a second look:",
+          "{{riskyClaims}}",
+          "",
+          "## The offer",
+          "{{offer}}",
+        ].join("\n")
+      ),
+
+      sendTo("n10", "Send it on", 5, 1, {
+        source: "flowys",
+        workflow: "Ad creative pack",
+        result: "{{result}}",
+      }),
+    ],
+    edges: wire(
+      "n1>n2",
+      "n1>n3",
+      "n2>n3",
+      "n1>n4",
+      "n2>n4",
+      "n4>n5",
+      "n1>n6",
+      "n6>n7",
+      "n2>n8",
+      "n3>n8",
+      "n1>n9",
+      "n2>n9",
+      "n3>n9",
+      "n5>n9",
+      "n7>n9",
+      "n8>n9",
+      "n9>n10"
+    ),
+  },
+};
+
+// ---------------------------------------------------------------------------
+
+const LOGO_BRAND_BOARD: WorkflowTemplate = {
+  id: "logo-brand-board",
+  name: "A logo concept and the whole brand board",
+  description:
+    "10 steps. Writes a design brief from your answers, generates a logo concept, puts it on a bottle, a cup, a tote, a card and a storefront, derives a colour palette from it, and lays it all out as a board.",
+  category: "Marketing",
+  needs: "The business name, what it does, and three style words",
+  workflow: {
+    nodes: [
+      ask("n1", "The business", 0, 1, [
+        {
+          name: "businessName",
+          type: "string",
+          required: true,
+          label: "The business name",
+          placeholder: "Kalinaw Coffee",
+        },
+        {
+          name: "whatItDoes",
+          type: "string",
+          required: true,
+          label: "What does it do?",
+          placeholder: "Small-batch coffee roasted in Iloilo",
+          multiline: true,
+        },
+        {
+          name: "styleWords",
+          type: "string",
+          required: true,
+          label: "Three style words",
+          placeholder: "warm, honest, modern",
+        },
+        {
+          name: "tagline",
+          type: "string",
+          label: "A tagline",
+          placeholder: "Slow mornings, good cups",
+          default: "",
+        },
+        {
+          name: "colorHint",
+          type: "string",
+          label: "A colour you already love",
+          placeholder: "deep forest green",
+          default: "whatever suits the style",
+        },
+      ]),
+
+      think("n2", "Write the design brief", 1, 0, {
+        system:
+          "You write logo design briefs. The mark must work small, in one colour, and read in half a second. Prefer a simple geometric or lettermark concept over an illustration.",
+        prompt:
+          "Business: {{businessName}}\nWhat it does: {{whatItDoes}}\nStyle words: {{styleWords}}\nColour preference: {{colorHint}}\n\nWrite the brief and the image prompt.",
+        gives: {
+          logoPrompt: {
+            type: "string",
+            description:
+              "One paragraph for an image model: a flat, minimal logo mark, centred, plain background, no photograph, no mockup, no shadows",
+          },
+          brief: { type: "string", description: "The design brief in two sentences" },
+          styleSummary: { type: "string", description: "The style, restated in one line" },
+        },
+      }),
+
+      picture("n3", "Logo concept", 2, 0, {
+        prompt: "{{logoPrompt}}",
+        size: "square",
+        quality: "best",
+        background: "transparent",
+      }),
+
+      brandKit("n4", "Mockups and palette", 3, 0, {
+        name: "{{businessName}}",
+        tagline: "{{tagline}}",
+      }),
+
+      think("n5", "Name the direction", 1, 2, {
+        system:
+          "You name creative directions so a team can talk about them. One short name and one honest sentence on why it fits this business.",
+        prompt:
+          "Business: {{businessName}}\nWhat it does: {{whatItDoes}}\nStyle words: {{styleWords}}\n\nName this direction.",
+        gives: {
+          directionName: { type: "string", description: "A short name for the direction, like a paint colour" },
+          whyItFits: { type: "string", description: "One sentence on why it suits the business" },
+        },
+      }),
+
+      think("n6", "Write the usage notes", 4, 2, {
+        system:
+          "You write brand usage notes a non-designer can follow. Concrete and short. Ground everything in the palette and style you are given.",
+        prompt:
+          "Style: {{styleSummary}}\nMain colour: {{primaryColor}}\nPalette: {{paletteHexes}}\n\nWrite the usage notes.",
+        gives: {
+          usageNotes: { type: "array", description: "Three or four dos, each one line" },
+          avoidNotes: { type: "array", description: "Two or three things best avoided, each one line" },
+        },
+      }),
+
+      rename("n7", "Keep the brief", 2, 1, { logoBrief: "brief" }),
+
+      think("n10", "Draft the reveal", 2, 2, {
+        temperature: 0.5,
+        system:
+          "You write the short message that introduces a new brand direction to a team or client. Warm, confident, three sentences at most, no corporate filler.",
+        prompt:
+          "Business: {{businessName}}\nDirection: {{directionName}}\nWhy it fits: {{whyItFits}}\n\nWrite the reveal message.",
+        gives: {
+          revealMessage: { type: "string", description: "The message, ready to send with the board" },
+        },
+      }),
+
+      result(
+        "n8",
+        "The brand board",
+        5,
+        1,
+        [
+          "{{boardMarkdown}}",
+          "",
+          "---",
+          "",
+          "## The direction",
+          "**{{directionName}}**",
+          "",
+          "{{whyItFits}}",
+          "",
+          "The brief behind the mark: {{logoBrief}}",
+          "",
+          "## Using it",
+          "{{usageNotes}}",
+          "",
+          "Best avoided:",
+          "{{avoidNotes}}",
+          "",
+          "---",
+          "",
+          "## Introducing it",
+          "",
+          "{{revealMessage}}",
+        ].join("\n")
+      ),
+
+      sendTo("n9", "Send it on", 6, 1, {
+        source: "flowys",
+        workflow: "Logo and brand board",
+        result: "{{result}}",
+      }),
+    ],
+    edges: wire(
+      "n1>n2",
+      "n2>n3",
+      "n3>n4",
+      "n1>n4",
+      "n1>n5",
+      "n2>n6",
+      "n4>n6",
+      "n2>n7",
+      "n1>n10",
+      "n5>n10",
+      "n4>n8",
+      "n5>n8",
+      "n6>n8",
+      "n7>n8",
+      "n10>n8",
+      "n8>n9"
+    ),
+  },
+};
+
+// ---------------------------------------------------------------------------
+
+const EMAIL_CAMPAIGN: WorkflowTemplate = {
+  id: "email-campaign",
+  name: "An email campaign, designed and ready to send",
+  description:
+    "10 steps. Plans the email from your brand material, writes the copy, assembles it into a branded layout that renders properly in real email clients, and hands on the subject and HTML shaped for your sender.",
+  category: "Marketing",
+  needs: "Your brand material, the announcement, and where the button should go",
+  workflow: {
+    nodes: [
+      ask("n1", "The campaign", 0, 1, [
+        {
+          name: "brandNotes",
+          type: "string",
+          required: true,
+          label: "Paste your brand material",
+          description: "Site copy, past emails, product facts. The email is written only from this.",
+          multiline: true,
+        },
+        {
+          name: "announcement",
+          type: "string",
+          required: true,
+          label: "What are you announcing?",
+          placeholder: "The new scheduling feature is live for everyone",
+          multiline: true,
+        },
+        {
+          name: "audience",
+          type: "string",
+          label: "Who gets this email?",
+          placeholder: "Everyone on the free plan",
+          default: "your subscribers",
+        },
+        {
+          name: "ctaUrl",
+          type: "string",
+          required: true,
+          label: "Where should the button go?",
+          placeholder: "https://your-site.com/new",
+        },
+        {
+          name: "brandColor",
+          type: "string",
+          label: "Your brand colour",
+          placeholder: "#1a73e8",
+          default: "#3366cc",
+        },
+      ]),
+
+      think("n2", "Plan the email", 1, 0, {
+        system:
+          "You plan one email. The subject earns the open and never lies about the content. Everything must be supported by the material given.",
+        prompt:
+          "Brand material:\n{{brandNotes}}\n\nAnnouncement: {{announcement}}\nAudience: {{audience}}\n\nPlan it.",
+        gives: {
+          subject: { type: "string", description: "The subject line, under 50 characters" },
+          preheader: { type: "string", description: "The line inboxes show after the subject, under 80 characters" },
+          heading: { type: "string", description: "The heading inside the email" },
+          goal: { type: "string", description: "The one action the email exists to cause" },
+        },
+      }),
+
+      think("n3", "Write the body", 1, 2, {
+        temperature: 0.5,
+        system:
+          "You write email body copy. Short paragraphs separated by blank lines. Where a list helps, write lines starting with '- '. Use only claims present in the brand material. End before you start repeating yourself.",
+        prompt:
+          "Brand material:\n{{brandNotes}}\n\nAnnouncement: {{announcement}}\nGoal: {{goal}}\nHeading: {{heading}}\n\nWrite the body.",
+        gives: {
+          bodyText: { type: "string", description: "The body: short paragraphs, blank lines between them, dashes for bullets" },
+          ctaText: { type: "string", description: "The button label, three words or fewer" },
+        },
+      }),
+
+      emailDesign("n4", "Assemble the email", 2, 1, {
+        layout: "promo",
+        subject: "{{subject}}",
+        preheader: "{{preheader}}",
+        heading: "{{heading}}",
+        body: "{{bodyText}}",
+        ctaText: "{{ctaText}}",
+        ctaUrl: "{{ctaUrl}}",
+        brandColor: "{{brandColor}}",
+      }),
+
+      think("n5", "Subject variants", 2, 0, {
+        temperature: 0.7,
+        system:
+          "You write alternative subject lines for testing. Same promise, different angle. Under 50 characters each.",
+        prompt: "The subject: {{subject}}\nPreview line: {{preheader}}\n\nWrite two alternatives.",
+        gives: {
+          subjectB: { type: "string", description: "A second subject, leading with the outcome" },
+          subjectC: { type: "string", description: "A third subject, leading with the audience" },
+        },
+      }),
+
+      think("n6", "Plain text version", 2, 3, {
+        system:
+          "You turn email copy into the plain text version senders attach alongside the HTML. Same content, no formatting, short lines.",
+        prompt: "The body:\n{{bodyText}}\n\nButton: {{ctaText}}\n\nWrite the plain text version.",
+        gives: {
+          plainText: { type: "string", description: "The whole email as plain text" },
+        },
+      }),
+
+      rename("n7", "Note the audience", 1, 4, { sendingTo: "audience" }),
+
+      think("n10", "Preflight it", 2, 2, {
+        system:
+          "You preflight marketing emails before they send. Look for spam trigger phrasing, a promise the body does not keep, and a missing reason to act now. Ground every flag in the text given.",
+        prompt: "The body:\n{{bodyText}}\n\nPreflight it.",
+        gives: {
+          spamVerdict: { type: "string", description: "One sentence: ready, or what to change first" },
+          spamRisks: { type: "array", description: "Specific lines to reconsider, or a single item saying all clear" },
+        },
+      }),
+
+      result(
+        "n8",
+        "The campaign",
+        3,
+        1,
+        [
+          "# {{subject}}",
+          "",
+          "{{previewMarkdown}}",
+          "",
+          "Sending to: **{{sendingTo}}** · preview line: {{preheader}}",
+          "",
+          "## Subject options",
+          "1. {{subject}}",
+          "2. {{subjectB}}",
+          "3. {{subjectC}}",
+          "",
+          "## Before it goes out",
+          "{{spamVerdict}}",
+          "{{spamRisks}}",
+          "",
+          "## Plain text version",
+          "{{plainText}}",
+        ].join("\n")
+      ),
+
+      sendTo("n9", "Hand to your sender", 4, 1, {
+        source: "flowys",
+        workflow: "Email campaign",
+        subject: "{{subject}}",
+        html: "{{emailHtml}}",
+      }),
+    ],
+    edges: wire(
+      "n1>n2",
+      "n1>n3",
+      "n2>n3",
+      "n1>n4",
+      "n2>n4",
+      "n3>n4",
+      "n2>n5",
+      "n3>n6",
+      "n1>n7",
+      "n3>n10",
+      "n4>n8",
+      "n5>n8",
+      "n6>n8",
+      "n7>n8",
+      "n10>n8",
+      "n8>n9",
+      "n4>n9"
+    ),
+  },
+};
+
 // Named alias for the support-triage template used by tests and callers that
 // reference it directly rather than by id lookup.
 export const supportTriageTemplate = SUPPORT_TRIAGE;
@@ -1281,6 +1882,9 @@ export const TEMPLATES: WorkflowTemplate[] = [
   REVIEW_THEMES,
   GITHUB_BRIEF,
   TOPIC_PULSE,
+  AD_CREATIVE_PACK,
+  LOGO_BRAND_BOARD,
+  EMAIL_CAMPAIGN,
 ];
 
 export function templatesByCategory(): [string, WorkflowTemplate[]][] {
