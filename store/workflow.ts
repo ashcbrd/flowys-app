@@ -4,7 +4,7 @@ import type { Node, Edge, Connection, NodeChange, EdgeChange } from "@xyflow/rea
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 import { api, type Workflow, type Execution, type ExecutionLog } from "@/lib/api";
 
-export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
+export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval" | "image" | "brand" | "email";
 
 export interface WorkflowNode extends Node {
   type: NodeType;
@@ -169,6 +169,29 @@ const defaultConfigs: Record<NodeType, Record<string, unknown>> = {
     queryTemplate: "",
     topK: 5,
   },
+  image: {
+    promptTemplate: "",
+    size: "square",
+    quality: "standard",
+    background: "auto",
+  },
+  brand: {
+    sourceTemplate: "{{assetId}}",
+    businessNameTemplate: "",
+    taglineTemplate: "",
+  },
+  email: {
+    layout: "newsletter",
+    brandColorTemplate: "",
+    logoUrlTemplate: "",
+    subjectTemplate: "",
+    preheaderTemplate: "",
+    headingTemplate: "",
+    bodyTemplate: "",
+    ctaTextTemplate: "",
+    ctaUrlTemplate: "",
+    footerTemplate: "",
+  },
 };
 
 const nodeLabels: Record<NodeType, string> = {
@@ -180,6 +203,9 @@ const nodeLabels: Record<NodeType, string> = {
   output: "Output",
   webhook: "Webhook",
   integration: "Integration",
+  image: "Picture",
+  brand: "Brand kit",
+  email: "Email",
 };
 
 /**

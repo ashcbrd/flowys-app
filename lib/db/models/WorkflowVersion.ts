@@ -19,7 +19,7 @@ const NodeDataSchema = new Schema(
     id: { type: String, required: true },
     type: {
       type: String,
-      enum: ["input", "api", "ai", "logic", "output", "webhook", "integration", "retrieval"],
+      enum: ["input", "api", "ai", "logic", "output", "webhook", "integration", "retrieval", "image", "brand", "email"],
       required: true,
     },
     position: {

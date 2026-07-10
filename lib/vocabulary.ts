@@ -196,6 +196,74 @@ export const RETRIEVAL_TERMS = {
   emptyResult: "Nothing in your documents matched.",
 } as const;
 
+/** Shapes a picture can take. Never "aspect ratio" or pixel counts. */
+export const IMAGE_SIZES: Term[] = [
+  { value: "square", label: "Square", help: "Good for logos, socials, and profile images" },
+  { value: "wide", label: "Wide", help: "Landscape, good for banners and headers" },
+  { value: "tall", label: "Tall", help: "Portrait, good for stories and posters" },
+];
+
+export const IMAGE_QUALITIES: Term[] = [
+  { value: "draft", label: "Draft", help: "Fast and cheap, good while trying ideas out" },
+  { value: "standard", label: "Standard", help: "The right choice most of the time" },
+  { value: "best", label: "Best", help: "Slowest and costs the most, for the final version" },
+];
+
+export const IMAGE_BACKGROUNDS: Term[] = [
+  { value: "auto", label: "Filled in", help: "The picture decides its own background" },
+  {
+    value: "transparent",
+    label: "See-through",
+    help: "No background at all. The right choice for logos",
+  },
+];
+
+/** The picture step, in plain words. */
+export const IMAGE_TERMS = {
+  stepName: "Picture",
+  promptLabel: "Describe the picture",
+  promptHelp:
+    "Say what should be in it and how it should feel. {{placeholders}} pull in values from earlier steps.",
+  sizeLabel: "Shape",
+  qualityLabel: "Quality",
+  backgroundLabel: "Background",
+} as const;
+
+/** The brand kit step, in plain words. */
+export const BRAND_TERMS = {
+  stepName: "Brand kit",
+  sourceLabel: "Which picture is the logo?",
+  sourceHelp: "Usually the picture step right before this one. Leave it as it is and that just works.",
+  nameLabel: "Business name",
+  taglineLabel: "Tagline",
+  taglineHelp: "One line under the name. Optional.",
+} as const;
+
+export const EMAIL_LAYOUTS_TERMS: Term[] = [
+  { value: "newsletter", label: "Newsletter", help: "A logo band and easy reading. The workhorse" },
+  { value: "promo", label: "Promo", help: "A bold colour hero that shouts once" },
+  { value: "announcement", label: "Announcement", help: "Quiet and centred, for news" },
+];
+
+/** The email design step, in plain words. */
+export const EMAIL_TERMS = {
+  stepName: "Email",
+  layoutLabel: "The look",
+  colorLabel: "Brand colour",
+  colorHelp: "A colour code like #1a73e8, or a {{placeholder}} carrying one.",
+  logoLabel: "Logo address",
+  logoHelp: "A web address for the logo image. Optional.",
+  subjectLabel: "Subject line",
+  preheaderLabel: "Preview line",
+  preheaderHelp: "The line inboxes show after the subject. Optional.",
+  headingLabel: "Heading",
+  bodyLabel: "Body text",
+  bodyHelp: "Blank lines make paragraphs. Lines starting with - become bullets.",
+  ctaTextLabel: "Button text",
+  ctaUrlLabel: "Button link",
+  footerLabel: "Footer line",
+} as const;
+
 export function helpFor(terms: Term[], value: string | undefined): string | undefined {
   if (!value) return undefined;
   return terms.find((t) => t.value === value)?.help;

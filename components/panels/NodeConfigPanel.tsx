@@ -31,6 +31,13 @@ import {
   LOGIC_OPERATIONS,
   HTTP_METHODS,
   OUTPUT_FORMATS,
+  IMAGE_SIZES,
+  IMAGE_QUALITIES,
+  IMAGE_BACKGROUNDS,
+  IMAGE_TERMS,
+  BRAND_TERMS,
+  EMAIL_LAYOUTS_TERMS,
+  EMAIL_TERMS,
   helpFor,
   humanizeFieldName,
 } from "@/lib/vocabulary";
@@ -207,6 +214,30 @@ export function NodeConfigPanel() {
         )}
         {selectedNode.type === "retrieval" && (
           <RetrievalNodeConfigSection
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
+        )}
+        {selectedNode.type === "image" && (
+          <ImageNodeConfigSection
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
+        )}
+        {selectedNode.type === "brand" && (
+          <BrandNodeConfigSection
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
+        )}
+        {selectedNode.type === "email" && (
+          <EmailNodeConfigSection
             config={pendingConfig}
             onChange={handleConfigChange}
             fields={availableFields}
@@ -1667,6 +1698,196 @@ function RetrievalNodeConfigSection({ config, onChange, fields: upstreamFields =
           documents page
         </Link>
         . The step hands the best passages to whatever comes next, usually an AI step.
+      </p>
+    </div>
+  );
+}
+
+/** A labelled select fed from a vocabulary term list. */
+function TermSelect({
+  label,
+  terms,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  terms: { value: string; label: string; help?: string }[];
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="mt-1">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {terms.map((term) => (
+            <SelectItem key={term.value} value={term.value}>
+              {term.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {helpFor(terms, value) && (
+        <p className="text-xs text-muted-foreground mt-1">{helpFor(terms, value)}</p>
+      )}
+    </div>
+  );
+}
+
+function ImageNodeConfigSection({ config, onChange, fields: upstreamFields = [] }: ConfigProps) {
+  const promptTemplate = (config.promptTemplate as string) ?? "";
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>{IMAGE_TERMS.promptLabel}</Label>
+        <TemplateInput
+          value={promptTemplate}
+          onChange={(value) => onChange("promptTemplate", value)}
+          fields={upstreamFields}
+          placeholder="e.g. a bright flat illustration of {{product}} on a single-colour background"
+          multiline
+          rows={4}
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{IMAGE_TERMS.promptHelp}</p>
+      </div>
+
+      <TermSelect
+        label={IMAGE_TERMS.sizeLabel}
+        terms={IMAGE_SIZES}
+        value={(config.size as string) || "square"}
+        onValueChange={(v) => onChange("size", v)}
+      />
+
+      <TermSelect
+        label={IMAGE_TERMS.qualityLabel}
+        terms={IMAGE_QUALITIES}
+        value={(config.quality as string) || "standard"}
+        onValueChange={(v) => onChange("quality", v)}
+      />
+
+      <TermSelect
+        label={IMAGE_TERMS.backgroundLabel}
+        terms={IMAGE_BACKGROUNDS}
+        value={(config.background as string) || "auto"}
+        onValueChange={(v) => onChange("background", v)}
+      />
+
+      <p className="text-xs text-muted-foreground">
+        The finished picture is handed to the next step as an address, and the
+        result panel shows it.
+      </p>
+    </div>
+  );
+}
+
+function BrandNodeConfigSection({ config, onChange, fields: upstreamFields = [] }: ConfigProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>{BRAND_TERMS.sourceLabel}</Label>
+        <TemplateInput
+          value={(config.sourceTemplate as string) ?? "{{assetId}}"}
+          onChange={(value) => onChange("sourceTemplate", value)}
+          fields={upstreamFields}
+          placeholder="{{assetId}}"
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{BRAND_TERMS.sourceHelp}</p>
+      </div>
+
+      <div>
+        <Label>{BRAND_TERMS.nameLabel}</Label>
+        <TemplateInput
+          value={(config.businessNameTemplate as string) ?? ""}
+          onChange={(value) => onChange("businessNameTemplate", value)}
+          fields={upstreamFields}
+          placeholder="e.g. {{businessName}}"
+          className="mt-1"
+        />
+      </div>
+
+      <div>
+        <Label>{BRAND_TERMS.taglineLabel}</Label>
+        <TemplateInput
+          value={(config.taglineTemplate as string) ?? ""}
+          onChange={(value) => onChange("taglineTemplate", value)}
+          fields={upstreamFields}
+          placeholder="e.g. {{tagline}}"
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{BRAND_TERMS.taglineHelp}</p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Takes the logo, puts it on a bottle, a cup, a tote bag, a business card
+        and a storefront, pulls a colour palette out of it, and lays everything
+        out as a brand board.
+      </p>
+    </div>
+  );
+}
+
+function EmailNodeConfigSection({ config, onChange, fields: upstreamFields = [] }: ConfigProps) {
+  const text = (key: string, placeholder: string, opts?: { multiline?: boolean; rows?: number; label: string; help?: string }) => (
+    <div>
+      <Label>{opts?.label}</Label>
+      <TemplateInput
+        value={(config[key] as string) ?? ""}
+        onChange={(value) => onChange(key, value)}
+        fields={upstreamFields}
+        placeholder={placeholder}
+        multiline={opts?.multiline}
+        rows={opts?.rows}
+        className="mt-1"
+      />
+      {opts?.help && <p className="text-xs text-muted-foreground mt-1">{opts.help}</p>}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <TermSelect
+        label={EMAIL_TERMS.layoutLabel}
+        terms={EMAIL_LAYOUTS_TERMS}
+        value={(config.layout as string) || "newsletter"}
+        onValueChange={(v) => onChange("layout", v)}
+      />
+
+      {text("subjectTemplate", "e.g. {{subject}}", { label: EMAIL_TERMS.subjectLabel })}
+      {text("preheaderTemplate", "e.g. {{preheader}}", {
+        label: EMAIL_TERMS.preheaderLabel,
+        help: EMAIL_TERMS.preheaderHelp,
+      })}
+      {text("headingTemplate", "e.g. {{heading}}", { label: EMAIL_TERMS.headingLabel })}
+      {text("bodyTemplate", "e.g. {{body}}", {
+        label: EMAIL_TERMS.bodyLabel,
+        help: EMAIL_TERMS.bodyHelp,
+        multiline: true,
+        rows: 5,
+      })}
+      {text("ctaTextTemplate", "e.g. See what changed", { label: EMAIL_TERMS.ctaTextLabel })}
+      {text("ctaUrlTemplate", "e.g. https://your-site.com/news", { label: EMAIL_TERMS.ctaUrlLabel })}
+      {text("brandColorTemplate", "e.g. #1a73e8 or {{primaryColor}}", {
+        label: EMAIL_TERMS.colorLabel,
+        help: EMAIL_TERMS.colorHelp,
+      })}
+      {text("logoUrlTemplate", "e.g. https://your-site.com/logo.png", {
+        label: EMAIL_TERMS.logoLabel,
+        help: EMAIL_TERMS.logoHelp,
+      })}
+      {text("footerTemplate", "e.g. You get this because you signed up.", {
+        label: EMAIL_TERMS.footerLabel,
+      })}
+
+      <p className="text-xs text-muted-foreground">
+        The step hands on the subject and the finished email, ready for a
+        webhook step to send through your email service, plus a preview link
+        so you can look before anything goes out.
       </p>
     </div>
   );

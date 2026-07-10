@@ -7,7 +7,7 @@ import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 const NodeSchema = z.object({
   id: z.string(),
-  type: z.enum(["input", "api", "ai", "logic", "output", "webhook", "integration", "retrieval"]),
+  type: z.enum(["input", "api", "ai", "logic", "output", "webhook", "integration", "retrieval", "image", "brand", "email"]),
   position: z.object({
     x: z.number(),
     y: z.number(),

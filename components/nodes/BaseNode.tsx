@@ -4,7 +4,13 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { Check, AlertCircle } from "lucide-react";
-import { LOGIC_OPERATIONS, labelFor } from "@/lib/vocabulary";
+import {
+  LOGIC_OPERATIONS,
+  IMAGE_SIZES,
+  IMAGE_QUALITIES,
+  EMAIL_LAYOUTS_TERMS,
+  labelFor,
+} from "@/lib/vocabulary";
 
 interface BaseNodeProps extends NodeProps {
   icon: ReactNode;
@@ -126,6 +132,16 @@ function checkIfConfigured(config: Record<string, unknown>): boolean {
   // resolved by the engine, so their absence no longer means "unconfigured".
   if (config.userPromptTemplate) return true;
 
+  // A picture step is set up once it has a description.
+  if (config.promptTemplate) return true;
+
+  // A brand kit step defaults to the picture that arrives from the previous
+  // step, so having a source at all counts as configured.
+  if (config.sourceTemplate) return true;
+
+  // An email step is set up once it has a subject and body.
+  if (config.subjectTemplate && config.bodyTemplate) return true;
+
   // Check for API node configuration
   if (config.url) return true;
 
@@ -148,12 +164,12 @@ function checkIfConfigured(config: Record<string, unknown>): boolean {
 }
 
 function getNodePreview(config: Record<string, unknown>): string | null {
-  // AI step, show the instruction. The last non-empty line is conventionally
-  // the ask ("Find the themes across all of these."); earlier lines are the data
-  // being handed over, which makes a poor summary.
-  const instruction = (config.userPromptTemplate ?? config.prompt) as
-    | string
-    | undefined;
+  // AI and picture steps, show the instruction. The last non-empty line is
+  // conventionally the ask ("Find the themes across all of these."); earlier
+  // lines are the data being handed over, which makes a poor summary.
+  const instruction = (config.userPromptTemplate ??
+    config.promptTemplate ??
+    config.prompt) as string | undefined;
 
   if (typeof instruction === "string" && instruction.trim()) {
     const lines = instruction
@@ -180,6 +196,16 @@ function getNodePreview(config: Record<string, unknown>): string | null {
   // Integration node
   if (config.actionName) {
     return config.actionName as string;
+  }
+
+  // Email step - the subject is the summary.
+  if (typeof config.subjectTemplate === "string" && config.subjectTemplate.trim()) {
+    return config.subjectTemplate.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, "…");
+  }
+
+  // Brand kit step - say what it does; its config is mostly defaults.
+  if (config.sourceTemplate) {
+    return "Mockups, palette, and a brand board";
   }
 
   // Logic node - show operation
@@ -223,6 +249,18 @@ export function getNodeSubtitle(config: Record<string, unknown>): string | null 
   // ("condition", "filter"), which is developer jargon on the canvas.
   if (typeof config.operation === "string") {
     return labelFor(LOGIC_OPERATIONS, config.operation);
+  }
+
+  // Picture step: the shape and quality it will make.
+  if (typeof config.promptTemplate === "string") {
+    const size = labelFor(IMAGE_SIZES, (config.size as string) || "square");
+    const quality = labelFor(IMAGE_QUALITIES, (config.quality as string) || "standard");
+    return `${size} · ${quality}`;
+  }
+
+  // Email step: which look it assembles.
+  if (typeof config.subjectTemplate === "string") {
+    return labelFor(EMAIL_LAYOUTS_TERMS, (config.layout as string) || "newsletter");
   }
 
   // AI step, how many named values it hands to the next step.

@@ -6,6 +6,9 @@ import { OutputNodeHandler } from "./output";
 import { WebhookNodeHandler } from "./webhook";
 import { IntegrationNodeHandler } from "./integration";
 import { RetrievalNodeHandler } from "./retrieval";
+import { ImageNodeHandler } from "./image";
+import { BrandNodeHandler } from "./brand";
+import { EmailNodeHandler } from "./email";
 import type { NodeHandler, NodeType, NodeContext, NodeResult } from "./types";
 
 export type {
@@ -21,6 +24,9 @@ export type {
   WebhookNodeConfig,
   IntegrationNodeConfig,
   RetrievalNodeConfig,
+  ImageNodeConfig,
+  BrandNodeConfig,
+  EmailNodeConfig,
 } from "./types";
 
 const handlers: Record<NodeType, NodeHandler> = {
@@ -32,6 +38,9 @@ const handlers: Record<NodeType, NodeHandler> = {
   webhook: new WebhookNodeHandler(),
   integration: new IntegrationNodeHandler(),
   retrieval: new RetrievalNodeHandler(),
+  image: new ImageNodeHandler(),
+  brand: new BrandNodeHandler(),
+  email: new EmailNodeHandler(),
 };
 
 export function getNodeHandler(type: NodeType): NodeHandler {

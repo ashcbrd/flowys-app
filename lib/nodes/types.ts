@@ -1,4 +1,4 @@
-export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
+export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval" | "image" | "brand" | "email";
 
 export interface NodeContext {
   nodeId: string;
@@ -106,6 +106,39 @@ export interface RetrievalNodeConfig {
    * Off by default: a step running thousands of times a month should opt in.
    */
   rerank?: boolean;
+}
+
+export interface ImageNodeConfig {
+  /** {{variable}} template resolved against inputs and global context. */
+  promptTemplate: string;
+  /** Stored values are frozen; the provider maps them to pixels per model. */
+  size?: "square" | "wide" | "tall";
+  quality?: "draft" | "standard" | "best";
+  /** "transparent" is what makes a logo compositable. */
+  background?: "auto" | "transparent";
+}
+
+export interface BrandNodeConfig {
+  /** Which image to build the kit from; defaults to the upstream {{assetId}}. */
+  sourceTemplate?: string;
+  /** The board's title. */
+  businessNameTemplate?: string;
+  /** One line under the title, italic. */
+  taglineTemplate?: string;
+}
+
+export interface EmailNodeConfig {
+  layout?: "newsletter" | "promo" | "announcement";
+  /** A hex colour, or a {{token}} that resolves to one. */
+  brandColorTemplate?: string;
+  logoUrlTemplate?: string;
+  subjectTemplate: string;
+  preheaderTemplate?: string;
+  headingTemplate: string;
+  bodyTemplate: string;
+  ctaTextTemplate?: string;
+  ctaUrlTemplate?: string;
+  footerTemplate?: string;
 }
 
 export interface IntegrationNodeConfig {

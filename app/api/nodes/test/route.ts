@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
       "output",
       "webhook",
       "integration",
+      "image",
+      "brand",
+      "email",
     ];
 
     if (!validTypes.includes(nodeType)) {

@@ -93,6 +93,30 @@ function declaredOutputs(node: WorkflowNode): NodeOutputKeys {
     case "integration":
       return [{ path: "data" }];
 
+    case "image":
+      return [
+        { path: "assetId", type: "string" },
+        { path: "imageUrl", type: "string" },
+        { path: "imageMarkdown", type: "string" },
+      ];
+
+    case "brand":
+      return [
+        { path: "boardMarkdown", type: "string" },
+        { path: "primaryColor", type: "string" },
+        { path: "paletteHexes", type: "array" },
+        { path: "mockupCount", type: "number" },
+      ];
+
+    case "email":
+      return [
+        { path: "subject", type: "string" },
+        { path: "preheader", type: "string" },
+        { path: "emailHtml", type: "string" },
+        { path: "previewUrl", type: "string" },
+        { path: "previewMarkdown", type: "string" },
+      ];
+
     default:
       return [];
   }

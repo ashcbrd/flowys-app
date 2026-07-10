@@ -43,6 +43,10 @@ function isPrimitive(value: unknown): boolean {
   );
 }
 
+/** Asset URLs carry their extension precisely so this test stays a glance. */
+const ASSET_IMAGE_PATTERN = /^\/api\/assets\/[\w-]+\.png$/;
+const ASSET_PAGE_PATTERN = /^\/api\/assets\/[\w-]+\.html$/;
+
 function PrimitiveValue({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === "") {
     return <span className="text-muted-foreground italic">empty</span>;
@@ -50,6 +54,33 @@ function PrimitiveValue({ value }: { value: unknown }) {
 
   if (typeof value === "boolean") {
     return <span>{value ? "Yes" : "No"}</span>;
+  }
+
+  // A stored picture: show it, don't print its address.
+  if (typeof value === "string" && ASSET_IMAGE_PATTERN.test(value)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={value}
+        alt="Generated image"
+        className="my-1 max-w-full rounded-lg border"
+        loading="lazy"
+      />
+    );
+  }
+
+  // A stored page (an email preview): a link that opens it.
+  if (typeof value === "string" && ASSET_PAGE_PATTERN.test(value)) {
+    return (
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[var(--fy-blue)] underline underline-offset-2"
+      >
+        Open the preview
+      </a>
+    );
   }
 
   // A named value can hold a whole written answer, not just a word. If it was

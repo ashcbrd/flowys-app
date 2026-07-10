@@ -21,6 +21,9 @@ import { RetrievalNode } from "@/components/nodes/RetrievalNode";
 import { OutputNode } from "@/components/nodes/OutputNode";
 import { IntegrationNode } from "@/components/nodes/IntegrationNode";
 import { WebhookNode } from "@/components/nodes/WebhookNode";
+import { ImageNode } from "@/components/nodes/ImageNode";
+import { BrandNode } from "@/components/nodes/BrandNode";
+import { EmailNode } from "@/components/nodes/EmailNode";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_NODE_COUNT = 50;
@@ -34,6 +37,9 @@ const nodeTypes = {
   integration: IntegrationNode,
   webhook: WebhookNode,
   retrieval: RetrievalNode,
+  image: ImageNode,
+  brand: BrandNode,
+  email: EmailNode,
 };
 
 function WorkflowCanvasInner() {

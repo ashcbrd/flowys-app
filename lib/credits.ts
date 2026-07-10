@@ -12,6 +12,12 @@ const CREDIT_COSTS: Record<string, number> = {
   ai: 10,
   webhook: 1,
   integration: 1,
+  // An image call costs orders of magnitude more than the text call behind
+  // `ai`, and the relative prices should say so.
+  image: 25,
+  // Compositing is local, but a brand kit stores half a dozen assets.
+  brand: 5,
+  email: 2,
 };
 
 export function calculateWorkflowCost(nodes: NodeData[]): number {

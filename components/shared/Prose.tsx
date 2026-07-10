@@ -27,7 +27,10 @@ export function looksLikeMarkdown(text: string): boolean {
     /\*\*[^*\n]+\*\*/.test(text) ||
     /^>\s/m.test(text) ||
     /`[^`\n]+`/.test(text) ||
-    /^\s*\|.+\|/m.test(text)
+    /^\s*\|.+\|/m.test(text) ||
+    // An image or a link on its own line, which is how picture steps and
+    // email previews arrive.
+    /!?\[[^\]]*\]\([^)]+\)/.test(text)
   );
 }
 
@@ -109,6 +112,17 @@ export function Prose({ children, className }: ProseProps) {
             >
               {children}
             </a>
+          ),
+          img: ({ src, alt }) => (
+            // Generated pictures and mockups land here. Constrained so a
+            // 1024px image reads as a figure inside a card, not a takeover.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={typeof src === "string" ? src : undefined}
+              alt={alt ?? ""}
+              className="my-2 max-w-full rounded-lg border"
+              loading="lazy"
+            />
           ),
           hr: () => <hr className="my-4 fy-hairline border-0" />,
           table: ({ children }) => (
