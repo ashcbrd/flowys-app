@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Zap, ArrowLeft } from "lucide-react";
+import { Zap, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getDomainUrl, navigateToLanding } from "@/lib/navigation";
 
@@ -123,8 +123,15 @@ export function AuthField({
   id,
   label,
   hint,
+  type,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+  // A password field gets a show/hide toggle. Typing a password blind is the
+  // one place a sign-in form makes people fail, and "was it a typo or is the
+  // password wrong" is not a question a form should ask.
+  const isPassword = type === "password";
+  const [revealed, setRevealed] = React.useState(false);
+
   return (
     <div className="space-y-2">
       <label htmlFor={id} className="block text-[13px] font-semibold text-[var(--fy-ink)]">
@@ -133,11 +140,26 @@ export function AuthField({
           <span className="ml-1.5 font-normal text-[var(--fy-slate)]">optional</span>
         )}
       </label>
-      <input
-        id={id}
-        {...props}
-        className="h-11 w-full rounded-xl border border-[var(--fy-line)] bg-background px-3.5 text-[15px] text-[var(--fy-ink)] outline-none transition-colors placeholder:text-[var(--fy-slate)]/70 focus:border-[var(--fy-blue)] focus:ring-4 focus:ring-[var(--fy-blue)]/12"
-      />
+      <div className="relative">
+        <input
+          id={id}
+          type={isPassword && revealed ? "text" : type}
+          {...props}
+          className={`h-11 w-full rounded-xl border border-[var(--fy-line)] bg-background px-3.5 text-[15px] text-[var(--fy-ink)] outline-none transition-colors placeholder:text-[var(--fy-slate)]/70 focus:border-[var(--fy-blue)] focus:ring-4 focus:ring-[var(--fy-blue)]/12 ${
+            isPassword ? "pr-11" : ""
+          }`}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setRevealed((r) => !r)}
+            aria-label={revealed ? "Hide password" : "Show password"}
+            className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--fy-slate)] transition-colors hover:bg-[var(--fy-mist)] hover:text-[var(--fy-ink)]"
+          >
+            {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
       {hint && <p className="text-[12px] text-[var(--fy-slate)]">{hint}</p>}
     </div>
   );

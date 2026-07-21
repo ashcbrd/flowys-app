@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -710,9 +711,8 @@ export function IntegrationsHub({ open, onOpenChange }: IntegrationsHubProps) {
             {selectedIntegration?.config.authType === "api_key" && (
               <div className="space-y-2">
                 <Label htmlFor="apiKey">API Key</Label>
-                <Input
+                <PasswordInput
                   id="apiKey"
-                  type="password"
                   placeholder="Enter your API key"
                   value={apiKeyValue}
                   onChange={(e) => setApiKeyValue(e.target.value)}
@@ -742,9 +742,8 @@ export function IntegrationsHub({ open, onOpenChange }: IntegrationsHubProps) {
                   <Label htmlFor="password">
                     {selectedIntegration.config.basicAuth?.passwordLabel || "Password"}
                   </Label>
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     placeholder="Enter password"
                     value={passwordValue}
                     onChange={(e) => setPasswordValue(e.target.value)}
