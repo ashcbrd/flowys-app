@@ -161,13 +161,25 @@ npm start
 - Version history
 - Import/Export workflows
 
-### Node Types
-- **Input**: Manual input, Webhook, Schedule
-- **Logic**: Condition, Loop, Delay
-- **AI**: GPT-4, Claude, Custom prompts
-- **Data**: Transform, Filter, Merge
-- **Integration**: Google Sheets, Slack, Email
-- **Output**: Response, Notification
+### Step Types
+- **Input**: the questions a run starts with, including file upload
+- **AI**: hand any step's work to a model, with structured output
+- **Your docs**: search your own documents and pass the best passages on
+- **Picture**: generate an image from a description
+- **Brand kit**: turn a logo into mockups, a palette, and a brand board
+- **Email**: assemble a branded email that renders in real clients
+- **API**: fetch from external services
+- **Logic**: transform, filter, condition, sort, slice
+- **Webhook**: signed outbound delivery with retries
+- **Output**: the formatted result
+
+### Marketing suite
+The Picture, Brand kit and Email steps power three ready-made templates:
+an ad creative pack grounded in your own brand material, a logo concept
+with composited mockups and a derived colour palette, and a designed email
+campaign shaped for any key-auth sender. Mockup scenes are generated once
+by `scripts/generate-mockup-scenes.mjs` and composited deterministically,
+so the logo is pixel-identical in every mockup.
 
 ### API Endpoints
 
