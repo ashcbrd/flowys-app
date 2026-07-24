@@ -182,12 +182,16 @@ function getNodePreview(config: Record<string, unknown>): string | null {
     if (ask) return ask.length > 70 ? `${ask.slice(0, 70)}…` : ask;
   }
 
-  // API node - show URL
+  // API and webhook steps both store a `url`, but they face opposite ways:
+  // one reads, one delivers. A webhook card saying "Fetching from" describes
+  // the wrong direction, so tell them apart by the keys only a webhook has.
   if (config.url) {
     const url = config.url as string;
+    const isWebhook =
+      config.payloadTemplate !== undefined || config.continueOnError !== undefined;
     try {
       const hostname = new URL(url).hostname;
-      return `Fetching from ${hostname}`;
+      return isWebhook ? `Sends the result to ${hostname}` : `Fetching from ${hostname}`;
     } catch {
       return `Calling ${url.slice(0, 40)}${url.length > 40 ? "..." : ""}`;
     }
