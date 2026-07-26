@@ -79,7 +79,7 @@ const docsContent = [
   {
     section: "Node Types",
     sectionId: "nodes",
-    title: "AI / LLM Node",
+    title: "AI step",
     content: "Process data using artificial intelligence. Summarize, analyze, generate, or transform content. Use OpenAI, Anthropic, and other providers.",
   },
   {

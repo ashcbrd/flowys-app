@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow";
 import { NodeConfigPanel } from "./NodeConfigPanel";
+import { ResultView } from "@/components/shared/ResultView";
 
 interface OutputModalData {
   nodeName: string;
@@ -118,9 +119,7 @@ export function ExecutionPanel() {
                               >
                                 <Maximize2 className="h-3 w-3" />
                               </Button>
-                              <pre className="p-2 bg-muted rounded text-xs overflow-x-auto max-h-32">
-                                {JSON.stringify(log.output, null, 2)}
-                              </pre>
+                              <ResultView value={log.output} className="max-h-[420px] overflow-auto" />
                             </div>
                           </details>
                         )}
@@ -167,9 +166,7 @@ export function ExecutionPanel() {
                         >
                           <Maximize2 className="h-3 w-3" />
                         </Button>
-                        <pre className="p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto max-h-48">
-                          {JSON.stringify(lastExecution.output, null, 2)}
-                        </pre>
+                        <ResultView value={lastExecution.output} className="max-h-[420px] overflow-auto" />
                       </div>
                     )}
                   </div>
@@ -253,9 +250,7 @@ export function ExecutionPanel() {
             <DialogTitle>Output: {outputModal?.nodeName}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-auto">
-            <pre className="p-4 bg-muted rounded-lg text-sm font-mono whitespace-pre-wrap break-words">
-              {outputModal && JSON.stringify(outputModal.output, null, 2)}
-            </pre>
+            <ResultView value={outputModal?.output} className="max-h-[420px] overflow-auto" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOutputModal(null)}>

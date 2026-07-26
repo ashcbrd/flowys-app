@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Settings, Zap, FlaskConical, ChevronRight, Loader2, CheckCircle2, XCircle, Play } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, FlaskConical, Loader2, Play, Settings, X, XCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { NodeConfigPanel } from "@/components/panels/NodeConfigPanel";
 import { ValueEditor } from "@/components/inputs/ValueEditor";
 import { useWorkflowStore } from "@/store/workflow";
 import { cn } from "@/lib/utils";
+import { ResultView } from "@/components/shared/ResultView";
+import { extractTokens } from "@/lib/utils/template";
+import { RunForm } from "@/components/inputs/RunForm";
+import { humanizeFieldName } from "@/lib/vocabulary";
 
 interface TestResult {
   success: boolean;
@@ -18,14 +21,41 @@ interface TestResult {
   duration?: number;
 }
 
+/**
+ * The values a step refers to, as an object of empty strings.
+ *
+ * Derived from the {{tokens}} in the step's own settings, so the test panel opens
+ * with the right field names already listed.
+ */
+function sampleInputFor(
+  node: { data?: { config?: Record<string, unknown> } } | null
+): Record<string, unknown> {
+  const config = node?.data?.config;
+  if (!config) return {};
+
+  const texts = Object.values(config).filter(
+    (v): v is string => typeof v === "string"
+  );
+
+  // Templates can also live inside nested config (a webhook payload, say).
+  const nested = JSON.stringify(
+    Object.values(config).filter((v) => v && typeof v === "object")
+  );
+
+  const seeded: Record<string, unknown> = {};
+  for (const text of [...texts, nested]) {
+    for (const token of extractTokens(text)) {
+      seeded[token.split(".")[0]] = "";
+    }
+  }
+
+  return seeded;
+}
+
 export function ConfigDrawer() {
   const { selectedNode, lastExecution, executionLogs, nodes } = useWorkflowStore();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("setup");
-  const [testInput, setTestInput] = useState<Record<string, unknown>>({});
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
-
   // Open drawer when a node is selected
   useEffect(() => {
     if (selectedNode) {
@@ -33,58 +63,16 @@ export function ConfigDrawer() {
     }
   }, [selectedNode]);
 
-  // Reset test state when node changes
-  useEffect(() => {
-    setTestInput({});
-    setTestResult(null);
-  }, [selectedNode?.id]);
-
   // Close drawer handler
   const handleClose = () => {
     setIsOpen(false);
-  };
-
-  // Run test handler
-  const handleRunTest = async () => {
-    if (!selectedNode) return;
-
-    setIsTesting(true);
-    setTestResult(null);
-
-    try {
-      const input = testInput;
-
-      // Get the current node config from the store (in case it was modified)
-      const currentNode = nodes.find((n) => n.id === selectedNode.id);
-      const config = currentNode?.data.config || selectedNode.data.config;
-
-      const response = await fetch("/api/nodes/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nodeType: selectedNode.type,
-          nodeId: selectedNode.id,
-          config,
-          input,
-        }),
-      });
-
-      const result = await response.json();
-      setTestResult(result);
-    } catch (error) {
-      setTestResult({
-        success: false,
-        error: error instanceof Error ? error.message : "Test failed",
-      });
-    } finally {
-      setIsTesting(false);
-    }
   };
 
   if (!selectedNode) {
     return null;
   }
 
+  // Shown under the step's name in the drawer header.
   const nodeTypeLabels: Record<string, string> = {
     input: "Input",
     api: "API Request",
@@ -138,7 +126,7 @@ export function ConfigDrawer() {
               <h3 className="font-semibold text-sm">
                 {selectedNode.data.label ||
                   nodeTypeLabels[selectedNode.type] ||
-                  "Configure Node"}
+                  "Set up this step"}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {nodeTypeLabels[selectedNode.type]}
@@ -190,101 +178,7 @@ export function ConfigDrawer() {
           </TabsContent>
 
           <TabsContent value="test" className="flex-1 overflow-auto m-0 p-4">
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Sample details</Label>
-                <p className="text-xs text-muted-foreground mt-1 mb-2">
-                  Try this step on its own. Add any values it needs.
-                </p>
-                <div className="rounded-md border p-3">
-                  <ValueEditor
-                    value={testInput}
-                    onChange={(next) =>
-                      setTestInput((next ?? {}) as Record<string, unknown>)
-                    }
-                    kind="group"
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleRunTest}
-                disabled={isTesting}
-                className="w-full gap-2"
-              >
-                {isTesting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Running Test...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    Run Test
-                  </>
-                )}
-              </Button>
-
-              {testResult && (
-                <div className="space-y-3">
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 p-3 rounded-lg",
-                      testResult.success
-                        ? "bg-green-500/10 text-green-600"
-                        : "bg-red-500/10 text-red-600"
-                    )}
-                  >
-                    {testResult.success ? (
-                      <CheckCircle2 className="h-5 w-5" />
-                    ) : (
-                      <XCircle className="h-5 w-5" />
-                    )}
-                    <div className="flex-1">
-                      <span className="font-medium text-sm">
-                        {testResult.success ? "Test Passed" : "Test Failed"}
-                      </span>
-                      {testResult.duration && (
-                        <span className="text-xs ml-2 opacity-75">
-                          ({testResult.duration}ms)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {testResult.error && (
-                    <div className="p-3 bg-red-500/10 rounded-lg">
-                      <p className="text-xs font-medium text-red-600 mb-1">
-                        Error
-                      </p>
-                      <p className="text-xs text-red-600/80">
-                        {testResult.error}
-                      </p>
-                    </div>
-                  )}
-
-                  {testResult.output && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Output
-                      </p>
-                      <pre className="bg-muted rounded-lg p-3 text-xs overflow-auto max-h-[200px]">
-                        {JSON.stringify(testResult.output, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {!testResult && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <FlaskConical className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">
-                    Configure your input and run a test to see results
-                  </p>
-                </div>
-              )}
-            </div>
+            <StepTester key={selectedNode.id} node={selectedNode} />
           </TabsContent>
 
           <TabsContent value="output" className="flex-1 overflow-auto m-0 p-4">
@@ -342,16 +236,17 @@ export function ConfigDrawer() {
                         )}
                       </div>
                     </div>
-                    <pre className="bg-muted rounded-lg p-3 text-xs overflow-auto max-h-[400px]">
-                      {JSON.stringify(nodeLog.output, null, 2)}
-                    </pre>
+                    <ResultView
+                      value={nodeLog.output}
+                      className="max-h-[420px] overflow-auto"
+                    />
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <ChevronRight className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                    <h4 className="font-medium text-sm mb-1">No Output Yet</h4>
+                    <h4 className="font-medium text-sm mb-1">Nothing to show yet</h4>
                     <p className="text-xs text-muted-foreground max-w-[240px] mx-auto">
-                      Run the workflow to see the output from this node.
+                      Run the workflow, or use Test above, to see what this step produces.
                     </p>
                   </div>
                 );
@@ -361,5 +256,148 @@ export function ConfigDrawer() {
         </Tabs>
       </div>
     </>
+  );
+}
+
+/**
+ * The Test tab for one step.
+ *
+ * Keyed on the step's id by its parent, so selecting a different step remounts
+ * this with fresh state — no effect resetting things, and no chance of one
+ * step's sample values leaking into another's.
+ */
+function StepTester({
+  node,
+}: {
+  node: { id: string; type: string; data: { config?: Record<string, unknown> } };
+}) {
+  const { nodes } = useWorkflowStore();
+
+  // Seeded from the step's own {{tokens}}: an empty box asks the user to work out
+  // what the step needs, which is the opposite of helpful.
+  const fields = Object.keys(sampleInputFor(node)).map((name) => ({
+    name,
+    type: "string" as const,
+    label: humanizeFieldName(name),
+  }));
+
+  const [input, setInput] = useState<Record<string, unknown>>(() =>
+    sampleInputFor(node)
+  );
+  const [isTesting, setIsTesting] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
+
+  const runTest = async () => {
+    setIsTesting(true);
+    setResult(null);
+
+    try {
+      // Read the live config so unsaved edits are what gets tested.
+      const current = nodes.find((n) => n.id === node.id);
+      const config = current?.data.config || node.data.config;
+
+      const response = await fetch("/api/nodes/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nodeType: node.type,
+          nodeId: node.id,
+          config,
+          input,
+        }),
+      });
+
+      setResult(await response.json());
+    } catch (error) {
+      setResult({
+        success: false,
+        error: error instanceof Error ? error.message : "Test failed",
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-sm font-medium">Sample details</Label>
+        <p className="text-xs text-muted-foreground mt-1 mb-2">
+          Try this step on its own, without running the whole workflow.
+        </p>
+
+        {fields.length > 0 ? (
+          <RunForm fields={fields} values={input} onChange={setInput} />
+        ) : (
+          <div className="rounded-md border p-3">
+            <ValueEditor
+              value={input}
+              onChange={(next) =>
+                setInput((next ?? {}) as Record<string, unknown>)
+              }
+              kind="group"
+            />
+          </div>
+        )}
+      </div>
+
+      <Button onClick={runTest} disabled={isTesting} className="w-full gap-2">
+        {isTesting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Running…
+          </>
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            Run test
+          </>
+        )}
+      </Button>
+
+      {result && (
+        <div className="space-y-3">
+          <div
+            className={cn(
+              "rounded-lg p-3 flex items-center gap-2",
+              result.success
+                ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                : "bg-red-500/10 text-red-700 dark:text-red-400"
+            )}
+          >
+            {result.success ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
+            <span className="text-sm font-medium">
+              {result.success ? "It worked" : "It didn't work"}
+            </span>
+          </div>
+
+          {result.error && (
+            <p className="text-xs text-red-600/80">{result.error}</p>
+          )}
+
+          {result.output && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">
+                What it produced
+              </p>
+              <ResultView
+                value={result.output}
+                className="max-h-[280px] overflow-auto"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!result && !isTesting && (
+        <p className="text-xs text-muted-foreground text-center py-4">
+          Fill in the details above and run a test to see what this step produces.
+        </p>
+      )}
+    </div>
   );
 }

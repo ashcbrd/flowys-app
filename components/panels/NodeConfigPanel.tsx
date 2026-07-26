@@ -132,7 +132,7 @@ export function NodeConfigPanel() {
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
       <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold">Node Configuration</h2>
+        <h2 className="font-semibold">Step settings</h2>
         <Button variant="ghost" size="icon" onClick={() => selectNode(null)}>
           <X className="h-4 w-4" />
         </Button>
@@ -228,14 +228,14 @@ export function NodeConfigPanel() {
           ) : (
             <>
               <Save className="h-4 w-4" />
-              {hasChanges ? "Save Configuration" : "No Changes"}
+              {hasChanges ? "Save settings" : "Nothing to save"}
             </>
           )}
         </Button>
 
         <Button variant="destructive" size="sm" onClick={handleDelete} className="w-full">
           <Trash2 className="h-4 w-4 mr-1" />
-          Delete Node
+          Delete this step
         </Button>
       </div>
     </div>

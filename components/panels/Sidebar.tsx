@@ -23,7 +23,7 @@ const nodeTypes = [
   },
   {
     type: "ai",
-    label: "AI / LLM",
+    label: "AI",
     description: "Execute AI prompts",
     icon: Sparkles,
     color: "bg-purple-600",
@@ -86,7 +86,7 @@ export function Sidebar() {
 
       {!collapsed && (
         <h2 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wide mt-6">
-          Nodes
+          Steps
         </h2>
       )}
 
@@ -152,10 +152,10 @@ export function Sidebar() {
             Instructions
           </h2>
           <div className="text-xs text-muted-foreground space-y-2">
-            <p>1. Drag nodes onto the canvas</p>
-            <p>2. Connect nodes by dragging from handles</p>
-            <p>3. Click a node to configure it</p>
-            <p>4. Click Run to execute the workflow</p>
+            <p>1. Drag a step onto the canvas</p>
+            <p>2. Join steps by dragging between the dots</p>
+            <p>3. Click a step to set it up</p>
+            <p>4. Press Run when you're ready</p>
           </div>
         </div>
       )}
