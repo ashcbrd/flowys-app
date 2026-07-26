@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow";
+import { ResultView } from "@/components/shared/ResultView";
 
 interface OutputModalData {
   nodeName: string;
@@ -158,7 +159,7 @@ export function ExecutionDrawer() {
           {executionLogs.length > 0 && (
             <div className="p-4">
               <h3 className="text-sm font-medium mb-3 text-muted-foreground">
-                Node Execution
+                Steps
               </h3>
               <div className="space-y-2">
                 {executionLogs.map((log, i) => (
@@ -212,9 +213,7 @@ export function ExecutionDrawer() {
                           >
                             <Maximize2 className="h-3 w-3" />
                           </Button>
-                          <pre className="p-2 bg-muted rounded text-xs overflow-x-auto max-h-32">
-                            {JSON.stringify(log.output, null, 2)}
-                          </pre>
+                          <ResultView value={log.output} className="max-h-[420px] overflow-auto" />
                         </div>
                       </details>
                     )}
@@ -264,9 +263,7 @@ export function ExecutionDrawer() {
                     >
                       <Maximize2 className="h-3 w-3" />
                     </Button>
-                    <pre className="p-3 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto max-h-48 border">
-                      {JSON.stringify(lastExecution.output, null, 2)}
-                    </pre>
+                    <ResultView value={lastExecution.output} className="max-h-[420px] overflow-auto" />
                   </div>
                 )}
               </div>
@@ -349,9 +346,7 @@ export function ExecutionDrawer() {
             <DialogTitle>Output: {outputModal?.nodeName}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-auto">
-            <pre className="p-4 bg-muted rounded-lg text-sm font-mono whitespace-pre-wrap break-words">
-              {outputModal && JSON.stringify(outputModal.output, null, 2)}
-            </pre>
+            <ResultView value={outputModal?.output} className="max-h-[420px] overflow-auto" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOutputModal(null)}>
