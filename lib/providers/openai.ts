@@ -103,7 +103,7 @@ export class OpenAIProvider implements LLMProvider {
       }
       requestParams.messages = openaiMessages;
 
-      if (this.supportsStructuredOutput(model)) {
+      if (this.supportsStructuredOutput(model) && this.canUseStrictSchema(outputSchema)) {
         // Tier 1: Use structured outputs for modern models (best reliability)
         const normalizedSchema = this.normalizeSchemaForOpenAI(outputSchema);
         requestParams.response_format = {
@@ -140,6 +140,29 @@ export class OpenAIProvider implements LLMProvider {
     };
   }
 
+  /**
+   * Strict structured outputs cannot express an object with no declared
+   * properties. Rather than let the request fail, such a schema drops to the
+   * unconstrained JSON tier — the response is still parsed and validated
+   * downstream, just not enforced by the provider.
+   */
+  private canUseStrictSchema(schema: unknown): boolean {
+    if (!schema || typeof schema !== "object") return true;
+    const node = schema as Record<string, unknown>;
+
+    if (node.type === "object") {
+      const properties = node.properties as Record<string, unknown> | undefined;
+      if (!properties || Object.keys(properties).length === 0) return false;
+      return Object.values(properties).every((value) => this.canUseStrictSchema(value));
+    }
+
+    if (node.type === "array" && node.items) {
+      return this.canUseStrictSchema(node.items);
+    }
+
+    return true;
+  }
+
   private normalizeSchemaForOpenAI(schema: OutputSchema | Record<string, unknown>): Record<string, unknown> {
     const normalized: Record<string, unknown> = { ...schema };
 
@@ -167,9 +190,15 @@ export class OpenAIProvider implements LLMProvider {
       }
     }
 
-    if (normalized.type === "array" && normalized.items) {
-      if (typeof normalized.items === "object") {
+    if (normalized.type === "array") {
+      if (normalized.items && typeof normalized.items === "object") {
         normalized.items = this.normalizeSchemaForOpenAI(normalized.items as Record<string, unknown>);
+      } else if (!normalized.items) {
+        // Structured outputs reject an array schema with no `items`, and the
+        // node editor's "List of items" type doesn't ask what the list holds.
+        // A list of text is the overwhelmingly common case, and without this the
+        // request 400s before the model is ever called.
+        normalized.items = { type: "string" };
       }
     }
 

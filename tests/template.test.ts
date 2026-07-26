@@ -130,3 +130,33 @@ describe("interpolateDeep", () => {
     });
   });
 });
+
+describe("array rendering style", () => {
+  it("defaults to JSON so request bodies stay machine-readable", () => {
+    expect(interpolateVariables("{{items}}", { items: ["a", "b"] })).toBe('["a","b"]');
+  });
+
+  it("renders bullets when the target is prose", () => {
+    expect(
+      interpolateVariables("{{items}}", { items: ["a", "b"] }, "keep", "list")
+    ).toBe("- a\n- b");
+  });
+
+  it("says so when a list is empty rather than printing []", () => {
+    expect(
+      interpolateVariables("{{items}}", { items: [] }, "keep", "list")
+    ).toBe("_none_");
+  });
+
+  it("leaves non-array objects as JSON even in list mode", () => {
+    expect(
+      interpolateVariables("{{obj}}", { obj: { a: 1 } }, "keep", "list")
+    ).toBe('{"a":1}');
+  });
+
+  it("falls back to JSON for objects inside a list", () => {
+    expect(
+      interpolateVariables("{{items}}", { items: [{ a: 1 }] }, "keep", "list")
+    ).toBe('- {"a":1}');
+  });
+});

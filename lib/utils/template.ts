@@ -15,6 +15,15 @@ export const TEMPLATE_TOKEN_PATTERN = /\{\{(\w+(?:\.\w+)*)\}\}/g;
 
 export type MissingBehavior = "keep" | "empty";
 
+/**
+ * How a list is rendered when substituted into text.
+ *
+ * `json` is required wherever the result is machine-read — a request body, a
+ * webhook payload. `list` is for prose a person reads, where a raw JSON array
+ * looks like a bug.
+ */
+export type ArrayStyle = "json" | "list";
+
 export function getNestedValue(
   obj: Record<string, unknown>,
   path: string
@@ -34,7 +43,8 @@ export function getNestedValue(
 export function interpolateVariables(
   template: string,
   inputs: Record<string, unknown>,
-  onMissing: MissingBehavior = "keep"
+  onMissing: MissingBehavior = "keep",
+  arrayStyle: ArrayStyle = "json"
 ): string {
   return template.replace(new RegExp(TEMPLATE_TOKEN_PATTERN), (_, path) => {
     const value = getNestedValue(inputs, path);
@@ -43,9 +53,28 @@ export function interpolateVariables(
       return onMissing === "empty" ? "" : `{{${path}}}`;
     }
 
+    if (arrayStyle === "list" && Array.isArray(value)) {
+      return renderList(value);
+    }
+
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
   });
+}
+
+/** Render a list as markdown bullets, one per line. */
+function renderList(items: unknown[]): string {
+  if (items.length === 0) return "_none_";
+
+  return items
+    .map((item) => {
+      const text =
+        item !== null && typeof item === "object"
+          ? JSON.stringify(item)
+          : String(item);
+      return `- ${text}`;
+    })
+    .join("\n");
 }
 
 /**

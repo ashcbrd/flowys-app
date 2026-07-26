@@ -59,6 +59,31 @@ export const MODELS: ModelOption[] = [
   },
 ];
 
+/**
+ * The one provider this deployment is configured for.
+ *
+ * Only an OpenAI key is provisioned, so a workflow step does not choose a
+ * provider or a model — offering the choice would only let a user select
+ * something that cannot run. The UI therefore asks nothing about this, and
+ * `resolveAiTarget` is the single place that decides.
+ *
+ * To offer the choice again: provision the other key, and reinstate the picker
+ * from `MODELS` (still exported below for that purpose).
+ */
+export const FIXED_PROVIDER: ProviderId = "openai";
+export const FIXED_MODEL = "gpt-4o-mini";
+
+/**
+ * What an AI step should actually call, whatever its stored config says.
+ *
+ * Saved workflows carry a provider and model from when the choice existed —
+ * including retired Anthropic models that would 404 and Anthropic steps that
+ * have no key. Overriding them is what keeps those workflows running.
+ */
+export function resolveAiTarget(): { provider: ProviderId; model: string } {
+  return { provider: FIXED_PROVIDER, model: FIXED_MODEL };
+}
+
 /** The model used when a step doesn't name one. */
 export const DEFAULT_MODEL: Record<ProviderId, string> = {
   anthropic: "claude-opus-5",

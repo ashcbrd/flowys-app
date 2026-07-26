@@ -52,6 +52,22 @@ describe("catalog", () => {
   });
 });
 
+describe("fixed AI target", () => {
+  it("resolves to a provider and model that exist in the catalog", async () => {
+    const { resolveAiTarget } = await import("@/lib/providers/models");
+    const target = resolveAiTarget();
+    expect(isKnownModel(target.model)).toBe(true);
+    expect(MODELS.find((m) => m.id === target.model)?.provider).toBe(target.provider);
+  });
+
+  it("ignores whatever a saved step stored", async () => {
+    // A step saved when the choice existed may name a retired Anthropic model
+    // with no key behind it; overriding is what keeps it running.
+    const { resolveAiTarget, FIXED_PROVIDER } = await import("@/lib/providers/models");
+    expect(resolveAiTarget().provider).toBe(FIXED_PROVIDER);
+  });
+});
+
 describe("retired model handling", () => {
   it("maps the default that shipped broken", () => {
     // This was the default in lib/providers/anthropic.ts and retired 2026-06-15.
@@ -102,5 +118,39 @@ describe("filtering and labelling", () => {
   it("falls back to the raw id when labelling something unknown", () => {
     expect(modelLabel("some-future-model")).toBe("some-future-model");
     expect(modelLabel(undefined)).toBe("");
+  });
+});
+
+describe("regression: OpenAI structured-output schema", () => {
+  it("fills in items for a list so the request is not rejected", async () => {
+    // A "List of items" output declared in the node editor has no `items`, which
+    // OpenAI rejects outright with a 400 before the model is ever called.
+    const { OpenAIProvider } = await import("@/lib/providers/openai");
+    const provider = new OpenAIProvider("sk-not-called");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const normalize = (provider as any).normalizeSchemaForOpenAI.bind(provider);
+
+    const normalized = normalize({
+      type: "object",
+      properties: { topics: { type: "array", description: "themes" } },
+      required: ["topics"],
+    });
+
+    expect(normalized.properties.topics.items).toEqual({ type: "string" });
+    expect(normalized.additionalProperties).toBe(false);
+  });
+
+  it("declines strict mode for an object with no declared fields", async () => {
+    const { OpenAIProvider } = await import("@/lib/providers/openai");
+    const provider = new OpenAIProvider("sk-not-called");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const canUse = (provider as any).canUseStrictSchema.bind(provider);
+
+    expect(canUse({ type: "object", properties: { a: { type: "string" } } })).toBe(true);
+    expect(canUse({ type: "object", properties: {} })).toBe(false);
+    expect(
+      canUse({ type: "object", properties: { g: { type: "object", properties: {} } } })
+    ).toBe(false);
   });
 });
