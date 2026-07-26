@@ -1,5 +1,6 @@
 import type { NodeHandler, NodeContext, NodeResult, WebhookNodeConfig } from "./types";
 import { generateWebhookSignature } from "@/lib/middleware/apiAuth";
+import { interpolateVariables, getNestedValue } from "@/lib/utils/template";
 
 export class WebhookNodeHandler implements NodeHandler {
   type = "webhook" as const;
@@ -31,7 +32,7 @@ export class WebhookNodeHandler implements NodeHandler {
 
       if (config.payloadTemplate) {
         // Use custom template
-        const templateString = this.interpolateVariables(
+        const templateString = interpolateVariables(
           JSON.stringify(config.payloadTemplate),
           { ...context.inputs, ...context.globalContext }
         );
@@ -66,7 +67,7 @@ export class WebhookNodeHandler implements NodeHandler {
       // Add custom headers from inputs if specified
       if (config.headerMappings) {
         for (const [headerName, inputPath] of Object.entries(config.headerMappings)) {
-          const value = this.getNestedValue(context.inputs, inputPath);
+          const value = getNestedValue(context.inputs, inputPath);
           if (value !== undefined) {
             headers[headerName] = String(value);
           }
@@ -168,28 +169,6 @@ export class WebhookNodeHandler implements NodeHandler {
         error: `Webhook error: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-  }
-
-  private interpolateVariables(template: string, inputs: Record<string, unknown>): string {
-    return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_, path) => {
-      const value = this.getNestedValue(inputs, path);
-      if (value === undefined) return `{{${path}}}`;
-      if (typeof value === "object") return JSON.stringify(value);
-      return String(value);
-    });
-  }
-
-  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    const keys = path.split(".");
-    let current: unknown = obj;
-
-    for (const key of keys) {
-      if (current === null || current === undefined) return undefined;
-      if (typeof current !== "object") return undefined;
-      current = (current as Record<string, unknown>)[key];
-    }
-
-    return current;
   }
 
   validateConfig(config: Record<string, unknown>): { valid: boolean; errors?: string[] } {

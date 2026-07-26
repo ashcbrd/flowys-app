@@ -1,4 +1,5 @@
 import type { NodeHandler, NodeContext, NodeResult, OutputNodeConfig } from "./types";
+import { interpolateVariables, getNestedValue } from "@/lib/utils/template";
 
 export class OutputNodeHandler implements NodeHandler {
   type = "output" as const;
@@ -48,7 +49,7 @@ export class OutputNodeHandler implements NodeHandler {
     if (config.fields && config.fields.length > 0) {
       const filtered: Record<string, unknown> = {};
       for (const field of config.fields) {
-        const value = this.getNestedValue(context.inputs, field);
+        const value = getNestedValue(context.inputs, field);
         if (value !== undefined) {
           filtered[field] = value;
         }
@@ -61,7 +62,7 @@ export class OutputNodeHandler implements NodeHandler {
 
   private formatText(context: NodeContext, config: OutputNodeConfig): Record<string, unknown> {
     if (config.template) {
-      const text = this.interpolateVariables(config.template, context.inputs);
+      const text = interpolateVariables(config.template, context.inputs);
       return { result: text, format: "text" };
     }
 
@@ -75,7 +76,7 @@ export class OutputNodeHandler implements NodeHandler {
 
   private formatMarkdown(context: NodeContext, config: OutputNodeConfig): Record<string, unknown> {
     if (config.template) {
-      const md = this.interpolateVariables(config.template, context.inputs);
+      const md = interpolateVariables(config.template, context.inputs);
       return { result: md, format: "markdown" };
     }
 
@@ -91,28 +92,6 @@ export class OutputNodeHandler implements NodeHandler {
     }
 
     return { result: md.trim(), format: "markdown" };
-  }
-
-  private interpolateVariables(template: string, inputs: Record<string, unknown>): string {
-    return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_, path) => {
-      const value = this.getNestedValue(inputs, path);
-      if (value === undefined) return `{{${path}}}`;
-      if (typeof value === "object") return JSON.stringify(value);
-      return String(value);
-    });
-  }
-
-  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    const keys = path.split(".");
-    let current: unknown = obj;
-
-    for (const key of keys) {
-      if (current === null || current === undefined) return undefined;
-      if (typeof current !== "object") return undefined;
-      current = (current as Record<string, unknown>)[key];
-    }
-
-    return current;
   }
 
   validateConfig(config: Record<string, unknown>): { valid: boolean; errors?: string[] } {

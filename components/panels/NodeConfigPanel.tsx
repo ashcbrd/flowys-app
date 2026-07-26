@@ -17,10 +17,33 @@ import {
 } from "@/components/ui/select";
 import { useWorkflowStore } from "@/store/workflow";
 import { cn } from "@/lib/utils";
+import { ValueEditor } from "@/components/inputs/ValueEditor";
+import { KeyValueEditor } from "@/components/inputs/KeyValueEditor";
+import { TemplateInput } from "@/components/inputs/TemplateInput";
+import { ConditionBuilder } from "@/components/inputs/ConditionBuilder";
+import { availableFieldsFor, itemFieldsFor, type AvailableField } from "@/lib/utils/fields";
+import {
+  FIELD_TYPES,
+  SCHEMA_TYPES,
+  LOGIC_OPERATIONS,
+  HTTP_METHODS,
+  OUTPUT_FORMATS,
+  AI_PROVIDERS,
+  helpFor,
+  humanizeFieldName,
+} from "@/lib/vocabulary";
 
 export function NodeConfigPanel() {
-  const { selectedNode, selectNode, updateNodeConfig, updateNodeLabel, deleteNode } =
-    useWorkflowStore();
+  const {
+    selectedNode,
+    selectNode,
+    updateNodeConfig,
+    updateNodeLabel,
+    deleteNode,
+    nodes,
+    edges,
+    lastExecution,
+  } = useWorkflowStore();
 
   // Local state for pending changes
   const [pendingConfig, setPendingConfig] = useState<Record<string, unknown>>({});
@@ -48,6 +71,26 @@ export function NodeConfigPanel() {
     const labelChanged = pendingLabel !== originalLabel;
     return configChanged || labelChanged;
   }, [pendingConfig, originalConfig, pendingLabel, originalLabel, selectedNode]);
+
+  // What each node actually produced last run. Lets the field picker offer real
+  // keys for nodes that don't declare their output shape up front.
+  const executionOutputs = useMemo(() => {
+    const map = new Map<string, Record<string, unknown>>();
+    for (const log of lastExecution?.logs || []) {
+      if (log.output) map.set(log.nodeId, log.output);
+    }
+    return map;
+  }, [lastExecution]);
+
+  const availableFields = useMemo(() => {
+    if (!selectedNode) return [];
+    return availableFieldsFor(selectedNode.id, nodes, edges, executionOutputs);
+  }, [selectedNode, nodes, edges, executionOutputs]);
+
+  const itemFields = useMemo(() => {
+    if (!selectedNode) return [];
+    return itemFieldsFor(selectedNode.id, nodes, edges, executionOutputs);
+  }, [selectedNode, nodes, edges, executionOutputs]);
 
   const handleConfigChange = useCallback((key: string, value: unknown) => {
     setPendingConfig(prev => ({ ...prev, [key]: value }));
@@ -105,25 +148,60 @@ export function NodeConfigPanel() {
         </div>
 
         {selectedNode.type === "input" && (
-          <InputNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <InputNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "api" && (
-          <ApiNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <ApiNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "ai" && (
-          <AiNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <AiNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "logic" && (
-          <LogicNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <LogicNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "output" && (
-          <OutputNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <OutputNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "integration" && (
-          <IntegrationNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <IntegrationNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
         {selectedNode.type === "webhook" && (
-          <WebhookNodeConfig config={pendingConfig} onChange={handleConfigChange} />
+          <WebhookNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
         )}
       </div>
 
@@ -166,6 +244,10 @@ export function NodeConfigPanel() {
 interface ConfigProps {
   config: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  /** Values from earlier steps that this node can reference. */
+  fields?: AvailableField[];
+  /** Per-item values, for logic nodes that iterate a list. */
+  itemFields?: AvailableField[];
 }
 
 interface InputField {
@@ -173,14 +255,69 @@ interface InputField {
   type: string;
   required?: boolean;
   default?: string | number | boolean;
+  label?: string;
+  description?: string;
+  placeholder?: string;
+}
+
+/** camelCase identifier from a human label. */
+function slugifyFieldName(label: string): string {
+  const words = label
+    .replace(/[^a-zA-Z0-9\s_-]/g, "")
+    .split(/[\s_-]+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return "";
+
+  return words
+    .map((word, i) =>
+      i === 0
+        ? word.charAt(0).toLowerCase() + word.slice(1)
+        : word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join("");
+}
+
+/** A name still at its generated default can be renamed safely. */
+function isDefaultFieldName(name: string): boolean {
+  return /^newField\d*$/.test(name || "");
 }
 
 function InputNodeConfig({ config, onChange }: ConfigProps) {
   const fields = (config.fields || []) as InputField[];
 
+  const uniqueFieldName = (base: string, exceptIndex: number): string => {
+    const taken = fields
+      .filter((_, i) => i !== exceptIndex)
+      .map((f) => f.name);
+
+    if (!taken.includes(base)) return base;
+    let n = 2;
+    while (taken.includes(`${base}${n}`)) n += 1;
+    return `${base}${n}`;
+  };
+
   const addField = () => {
-    const newFields = [...fields, { name: "newField", type: "string", required: false }];
+    const name = uniqueFieldName("newField", -1);
+    const newFields = [...fields, { name, type: "string", required: false }];
     onChange("fields", newFields);
+  };
+
+  /**
+   * Keep the stored name in step with the label while it is still a generated
+   * default. Once a field has a real name, other nodes may reference it in a
+   * {{token}}, so renaming it from here would silently break them.
+   */
+  const updateLabel = (index: number, label: string) => {
+    const field = fields[index];
+    const updates: Partial<InputField> = { label };
+
+    if (isDefaultFieldName(field.name)) {
+      const slug = slugifyFieldName(label);
+      if (slug) updates.name = uniqueFieldName(slug, index);
+    }
+
+    updateField(index, updates);
   };
 
   const updateField = (index: number, updates: Partial<InputField>) => {
@@ -196,16 +333,20 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label>Input Fields</Label>
+        <Label>What should we ask for?</Label>
         <Button size="sm" variant="outline" onClick={addField}>
           <Plus className="h-3 w-3 mr-1" />
-          Add Field
+          Add question
         </Button>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        Each one becomes a box on the form shown before the workflow runs.
+      </p>
+
       {fields.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed">
-          No fields defined. Add a field to accept user input.
+          Nothing asked for yet. This workflow will start straight away.
         </p>
       )}
 
@@ -215,9 +356,9 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-muted-foreground" />
               <Input
-                value={field.name}
-                onChange={(e) => updateField(i, { name: e.target.value })}
-                placeholder="Field name"
+                value={field.label ?? ""}
+                onChange={(e) => updateLabel(i, e.target.value)}
+                placeholder={humanizeFieldName(field.name) || "Question"}
                 className="flex-1 h-8"
               />
               <Button
@@ -225,14 +366,25 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
                 variant="ghost"
                 className="h-8 w-8 text-destructive"
                 onClick={() => removeField(i)}
+                aria-label="Remove question"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
             </div>
 
+            <div>
+              <Label className="text-xs">Hint (optional)</Label>
+              <Input
+                value={field.description ?? ""}
+                onChange={(e) => updateField(i, { description: e.target.value })}
+                placeholder="Shown in small text under the box"
+                className="h-8 mt-1"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Type</Label>
+                <Label className="text-xs">Kind of answer</Label>
                 <Select
                   value={field.type}
                   onValueChange={(v) => updateField(i, { type: v })}
@@ -241,15 +393,16 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="string">String</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="boolean">Boolean</SelectItem>
-                    <SelectItem value="json">JSON</SelectItem>
+                    {FIELD_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Default Value</Label>
+                <Label className="text-xs">Pre-filled answer</Label>
                 <Input
                   value={String(field.default ?? "")}
                   onChange={(e) => updateField(i, { default: e.target.value })}
@@ -266,9 +419,15 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
                 onCheckedChange={(checked) => updateField(i, { required: checked })}
               />
               <Label htmlFor={`required-${i}`} className="text-xs">
-                Required field
+                Must be answered before running
               </Label>
             </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Saved as{" "}
+              <span className="font-medium">{field.name || "unnamed"}</span> — other
+              steps use this name to refer to the answer.
+            </p>
           </div>
         ))}
       </div>
@@ -281,7 +440,7 @@ interface HeaderItem {
   value: string;
 }
 
-function ApiNodeConfig({ config, onChange }: ConfigProps) {
+function ApiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
   const headers = config.headers as Record<string, string> | undefined;
   const headersList: HeaderItem[] = headers
     ? Object.entries(headers).map(([key, value]) => ({ key, value }))
@@ -313,20 +472,19 @@ function ApiNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>URL</Label>
-        <Input
-          value={(config.url as string) || ""}
-          onChange={(e) => onChange("url", e.target.value)}
-          placeholder="https://api.example.com/data"
-          className="mt-1"
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Use {"{{variableName}}"} for dynamic values
-        </p>
+        <Label>Web address</Label>
+        <div className="mt-1">
+          <TemplateInput
+            value={(config.url as string) || ""}
+            onChange={(next) => onChange("url", next)}
+            fields={fields}
+            placeholder="https://api.example.com/data"
+          />
+        </div>
       </div>
 
       <div>
-        <Label>Method</Label>
+        <Label>What should we do there?</Label>
         <Select
           value={(config.method as string) || "GET"}
           onValueChange={(v) => onChange("method", v)}
@@ -335,11 +493,11 @@ function ApiNodeConfig({ config, onChange }: ConfigProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="GET">GET</SelectItem>
-            <SelectItem value="POST">POST</SelectItem>
-            <SelectItem value="PUT">PUT</SelectItem>
-            <SelectItem value="DELETE">DELETE</SelectItem>
-            <SelectItem value="PATCH">PATCH</SelectItem>
+            {HTTP_METHODS.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -388,41 +546,95 @@ function ApiNodeConfig({ config, onChange }: ConfigProps) {
       </div>
 
       {["POST", "PUT", "PATCH"].includes((config.method as string) || "") && (
-        <div>
-          <Label>Request Body</Label>
-          <Textarea
-            value={(config.body as string) || ""}
-            onChange={(e) => onChange("body", e.target.value)}
-            placeholder='{"key": "{{value}}"}'
-            className="mt-1 font-mono text-sm"
-            rows={4}
-          />
-        </div>
+        <RequestBodyEditor
+          body={(config.body as string) || ""}
+          onChange={(next) => onChange("body", next)}
+          fields={fields}
+        />
       )}
 
+      <KeyValueEditor
+        label="Which parts of the reply do you want to keep?"
+        help="Give each piece a name you'll use later, and say where to find it in the reply."
+        value={config.responseMapping as Record<string, unknown> | undefined}
+        onChange={(next) => onChange("responseMapping", next)}
+        keyPlaceholder="Call it…"
+        valuePlaceholder="data.title"
+        emptyMessage="Keeping the whole reply as-is"
+        addLabel="Add a piece"
+        showArrow
+      />
+    </div>
+  );
+}
+
+/**
+ * The request body is stored as a JSON string. Editing it structurally keeps the
+ * stored shape identical while removing the need to write JSON by hand.
+ *
+ * A legacy value that isn't valid JSON stays editable as text rather than being
+ * silently discarded — otherwise a saved workflow could lose its body.
+ */
+function RequestBodyEditor({
+  body,
+  onChange,
+  fields,
+}: {
+  body: string;
+  onChange: (next: string) => void;
+  fields: AvailableField[];
+}) {
+  const parsed = useMemo(() => {
+    if (!body.trim()) return { ok: true, value: {} as unknown };
+    try {
+      return { ok: true, value: JSON.parse(body) as unknown };
+    } catch {
+      return { ok: false, value: null };
+    }
+  }, [body]);
+
+  if (!parsed.ok) {
+    return (
       <div>
-        <Label>Response Mapping (optional)</Label>
-        <Textarea
-          value={
-            config.responseMapping
-              ? JSON.stringify(config.responseMapping, null, 2)
-              : ""
-          }
-          onChange={(e) => {
-            try {
-              const parsed = e.target.value ? JSON.parse(e.target.value) : undefined;
-              onChange("responseMapping", parsed);
-            } catch {
-              // Allow invalid JSON while typing
-            }
-          }}
-          placeholder='{"outputField": "response.data.field"}'
-          className="mt-1 font-mono text-sm"
-          rows={3}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Map response fields to output names (JSON format)
+        <Label>What should we send?</Label>
+        <p className="text-xs text-muted-foreground mt-1 mb-2">
+          This was set up with custom text. Clear it to switch to the simple
+          editor.
         </p>
+        <TemplateInput
+          value={body}
+          onChange={onChange}
+          fields={fields}
+          multiline
+          rows={4}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Label>What should we send?</Label>
+      <div className="mt-2">
+        <ValueEditor
+          value={parsed.value}
+          onChange={(next) =>
+            onChange(
+              next && Object.keys(next as object).length > 0
+                ? JSON.stringify(next)
+                : ""
+            )
+          }
+          kind="group"
+          renderTextInput={({ value, onChange: setText, placeholder }) => (
+            <TemplateInput
+              value={value}
+              onChange={setText}
+              fields={fields}
+              placeholder={placeholder}
+            />
+          )}
+        />
       </div>
     </div>
   );
@@ -433,7 +645,7 @@ interface SchemaProperty {
   description: string;
 }
 
-function AiNodeConfig({ config, onChange }: ConfigProps) {
+function AiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
   const outputSchema = config.outputSchema as {
     type?: string;
     properties?: Record<string, SchemaProperty>;
@@ -480,7 +692,7 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Provider</Label>
+        <Label>Which AI should do this?</Label>
         <Select
           value={(config.provider as string) || "openai"}
           onValueChange={(v) => onChange("provider", v)}
@@ -489,8 +701,11 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="openai">OpenAI</SelectItem>
-            <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+            {AI_PROVIDERS.map((pr) => (
+              <SelectItem key={pr.value} value={pr.value}>
+                {pr.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -506,33 +721,37 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
       </div>
 
       <div>
-        <Label>System Prompt</Label>
+        <Label>How should the AI behave?</Label>
+        <p className="text-xs text-muted-foreground mt-1 mb-2">
+          Optional. Sets the tone and role for every run.
+        </p>
         <Textarea
           value={(config.systemPrompt as string) || ""}
           onChange={(e) => onChange("systemPrompt", e.target.value)}
           placeholder="You are a helpful assistant."
-          className="mt-1"
           rows={3}
         />
       </div>
 
       <div>
-        <Label>User Prompt Template</Label>
-        <Textarea
+        <Label>What should the AI do?</Label>
+        <p className="text-xs text-muted-foreground mt-1 mb-2">
+          Write the instruction. Use the button below to drop in answers from
+          earlier steps.
+        </p>
+        <TemplateInput
           value={(config.userPromptTemplate as string) || ""}
-          onChange={(e) => onChange("userPromptTemplate", e.target.value)}
-          placeholder="Use {{variableName}} for dynamic values"
-          className="mt-1"
+          onChange={(next) => onChange("userPromptTemplate", next)}
+          fields={fields}
+          placeholder="Summarise this feedback and rate how urgent it is."
+          multiline
           rows={4}
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          Use {"{{variableName}}"} to inject values from previous nodes
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label>Temperature</Label>
+          <Label>Creativity</Label>
           <Input
             type="number"
             min="0"
@@ -544,7 +763,7 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
           />
         </div>
         <div>
-          <Label>Max Tokens</Label>
+          <Label>Longest reply</Label>
           <Input
             type="number"
             min="1"
@@ -558,20 +777,20 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <Label>Output Schema</Label>
+          <Label>What should the AI give back?</Label>
           <Button size="sm" variant="outline" onClick={addProperty}>
             <Plus className="h-3 w-3 mr-1" />
-            Add Field
+            Add answer
           </Button>
         </div>
 
         <p className="text-xs text-muted-foreground mb-2">
-          Define the expected JSON structure for the AI response
+          Name each piece of the answer so later steps can use it.
         </p>
 
         {propsList.length === 0 && (
           <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed">
-            No output fields defined. AI will return raw text.
+Nothing named yet — the AI will just return plain text.
           </p>
         )}
 
@@ -582,22 +801,22 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
                 <Input
                   value={prop.name}
                   onChange={(e) => updateProperty(i, { name: e.target.value })}
-                  placeholder="Field name"
+                  placeholder="Name it, e.g. summary"
                   className="h-8 flex-1"
                 />
                 <Select
                   value={prop.type}
                   onValueChange={(v) => updateProperty(i, { type: v })}
                 >
-                  <SelectTrigger className="h-8 w-24">
+                  <SelectTrigger className="h-8 w-[130px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="string">string</SelectItem>
-                    <SelectItem value="number">number</SelectItem>
-                    <SelectItem value="boolean">boolean</SelectItem>
-                    <SelectItem value="array">array</SelectItem>
-                    <SelectItem value="object">object</SelectItem>
+                    {SCHEMA_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button
@@ -612,7 +831,7 @@ function AiNodeConfig({ config, onChange }: ConfigProps) {
               <Input
                 value={prop.description}
                 onChange={(e) => updateProperty(i, { description: e.target.value })}
-                placeholder="Description (helps the AI understand)"
+                placeholder="What is this? Helps the AI get it right."
                 className="h-8 text-xs"
               />
             </div>
@@ -628,8 +847,59 @@ interface MappingItem {
   value: string;
 }
 
-function LogicNodeConfig({ config, onChange }: ConfigProps) {
+/**
+ * Ways to combine a list into one value. `value` is the operation name in the
+ * `op:field` expression the Logic node already parses.
+ */
+const COMBINE_OPERATIONS = [
+  { value: "sum", label: "Add them up", needsField: true },
+  { value: "count", label: "Count them", needsField: false },
+  { value: "avg", label: "Average them", needsField: true },
+  { value: "min", label: "Find the smallest", needsField: true },
+  { value: "max", label: "Find the largest", needsField: true },
+  { value: "first", label: "Take the first one", needsField: false },
+  { value: "last", label: "Take the last one", needsField: false },
+  { value: "concat", label: "Join them into text", needsField: true },
+];
+
+function LogicNodeConfig({
+  config,
+  onChange,
+  fields: upstreamFields = [],
+  itemFields = [],
+}: ConfigProps) {
   const operation = (config.operation as string) || "transform";
+
+  // Operations that walk a list compare each `item`; the rest compare the
+  // incoming values directly.
+  const conditionFields =
+    operation === "filter" ? itemFields : upstreamFields;
+
+  const expression = (config.expression as string) || "";
+  const [combineOp, combineField] = expression.split(":");
+  const activeCombine =
+    COMBINE_OPERATIONS.find((o) => o.value === combineOp) ?? COMBINE_OPERATIONS[0];
+
+  const setCombine = (op: string, field: string) => {
+    const spec = COMBINE_OPERATIONS.find((o) => o.value === op);
+    onChange("expression", spec?.needsField && field ? `${op}:${field}` : op);
+  };
+
+  /**
+   * Options for a mapping source. A saved mapping may point at a path the picker
+   * can't derive yet, so it stays listed rather than disappearing when the row is
+   * touched.
+   */
+  const mappingOptions = (current: string): AvailableField[] => {
+    const base = operation === "map" ? itemFields : upstreamFields;
+    if (current && !base.some((f) => f.path === current)) {
+      return [
+        { path: current, label: current, source: "Already set" },
+        ...base,
+      ];
+    }
+    return base;
+  };
   const mappings = config.mappings as Record<string, string> | undefined;
   const mappingsList: MappingItem[] = mappings
     ? Object.entries(mappings).map(([key, value]) => ({ key, value }))
@@ -661,7 +931,7 @@ function LogicNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Operation</Label>
+        <Label>What should this step do?</Label>
         <Select
           value={operation}
           onValueChange={(v) => onChange("operation", v)}
@@ -670,65 +940,85 @@ function LogicNodeConfig({ config, onChange }: ConfigProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="transform">Transform</SelectItem>
-            <SelectItem value="filter">Filter</SelectItem>
-            <SelectItem value="map">Map</SelectItem>
-            <SelectItem value="reduce">Reduce</SelectItem>
-            <SelectItem value="condition">Condition</SelectItem>
+            {LOGIC_OPERATIONS.map((op) => (
+              <SelectItem key={op.value} value={op.value}>
+                {op.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground mt-1">
-          {operation === "transform" && "Remap fields from input to output"}
-          {operation === "filter" && "Filter array items by condition"}
-          {operation === "map" && "Transform each item in an array"}
-          {operation === "reduce" && "Aggregate array to single value"}
-          {operation === "condition" && "Branch based on condition"}
+          {helpFor(LOGIC_OPERATIONS, operation)}
         </p>
       </div>
 
       {(operation === "filter" || operation === "condition") && (
-        <div>
-          <Label>Condition</Label>
-          <Input
-            value={(config.condition as string) || ""}
-            onChange={(e) => onChange("condition", e.target.value)}
-            placeholder="e.g., item.score > 0.5 or status == 'active'"
-            className="mt-1"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Operators: ==, !=, &gt;, &lt;, &gt;=, &lt;=, contains, exists
-          </p>
-        </div>
+        <ConditionBuilder
+          value={config.condition as string | undefined}
+          onChange={(next) => onChange("condition", next)}
+          fields={conditionFields}
+          label={operation === "filter" ? "Keep an item when…" : "Go this way when…"}
+          help={
+            operation === "filter"
+              ? "Items that don't match are dropped."
+              : "Sets which path the workflow takes next."
+          }
+        />
       )}
 
       {operation === "reduce" && (
         <div>
-          <Label>Expression</Label>
-          <Input
-            value={(config.expression as string) || ""}
-            onChange={(e) => onChange("expression", e.target.value)}
-            placeholder="e.g., sum:amount or count or avg:score"
-            className="mt-1"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Available: sum, count, avg, min, max, first, last, concat
-          </p>
+          <Label>How should we combine them?</Label>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Select
+              value={activeCombine.value}
+              onValueChange={(op) => setCombine(op, combineField || "")}
+            >
+              <SelectTrigger className="h-8 flex-1 min-w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMBINE_OPERATIONS.map((op) => (
+                  <SelectItem key={op.value} value={op.value}>
+                    {op.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {activeCombine.needsField && (
+              <Input
+                className="h-8 flex-1 min-w-[120px]"
+                value={combineField || ""}
+                placeholder="Which value? e.g. amount"
+                onChange={(e) => setCombine(activeCombine.value, e.target.value)}
+              />
+            )}
+          </div>
         </div>
       )}
 
       {(operation === "transform" || operation === "map") && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label>Field Mappings</Label>
+            <Label>
+              {operation === "map"
+                ? "What should each item become?"
+                : "What should come out of this step?"}
+            </Label>
             <Button size="sm" variant="outline" onClick={addMapping}>
               <Plus className="h-3 w-3 mr-1" />
-              Add Mapping
+              Add
             </Button>
           </div>
 
+          <p className="text-xs text-muted-foreground mb-2">
+            Name each value, then say where it comes from.
+          </p>
+
           {mappingsList.length === 0 && (
             <p className="text-xs text-muted-foreground py-2 text-center border rounded border-dashed">
-              No mappings - all input passed through
+              Nothing set — everything passes through unchanged
             </p>
           )}
 
@@ -738,21 +1028,39 @@ function LogicNodeConfig({ config, onChange }: ConfigProps) {
                 <Input
                   value={mapping.key}
                   onChange={(e) => updateMapping(i, { key: e.target.value })}
-                  placeholder="Output name"
+                  placeholder="Call it…"
                   className="h-8 flex-1"
                 />
-                <span className="text-muted-foreground">←</span>
-                <Input
-                  value={mapping.value}
-                  onChange={(e) => updateMapping(i, { value: e.target.value })}
-                  placeholder="Input path (e.g., response.data)"
-                  className="h-8 flex-1"
-                />
+                <span className="text-muted-foreground text-xs shrink-0">
+                  comes from
+                </span>
+                <Select
+                  value={mapping.value || undefined}
+                  onValueChange={(v) => updateMapping(i, { value: v })}
+                >
+                  <SelectTrigger className="h-8 flex-1">
+                    <SelectValue placeholder="Choose a value" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mappingOptions(mapping.value).length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        Connect an earlier step first
+                      </SelectItem>
+                    ) : (
+                      mappingOptions(mapping.value).map((f) => (
+                        <SelectItem key={f.path} value={f.path}>
+                          {f.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
                   onClick={() => removeMapping(i)}
+                  aria-label="Remove"
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -765,7 +1073,11 @@ function LogicNodeConfig({ config, onChange }: ConfigProps) {
   );
 }
 
-function OutputNodeConfig({ config, onChange }: ConfigProps) {
+function OutputNodeConfig({
+  config,
+  onChange,
+  fields: upstreamFields = [],
+}: ConfigProps) {
   const format = (config.format as string) || "json";
   const fields = (config.fields as string[]) || [];
 
@@ -776,7 +1088,7 @@ function OutputNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Format</Label>
+        <Label>How should the result look?</Label>
         <Select
           value={format}
           onValueChange={(v) => onChange("format", v)}
@@ -785,46 +1097,75 @@ function OutputNodeConfig({ config, onChange }: ConfigProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="json">JSON</SelectItem>
-            <SelectItem value="text">Text</SelectItem>
-            <SelectItem value="markdown">Markdown</SelectItem>
+            {OUTPUT_FORMATS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       {format === "json" && (
         <div>
-          <Label>Fields to Include (optional)</Label>
-          <Textarea
-            value={fields.join("\n")}
-            onChange={(e) => updateFields(e.target.value.split("\n"))}
-            placeholder="Leave empty for all fields, or enter one field per line"
-            className="mt-1 font-mono text-sm"
-            rows={3}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Specify which fields to include in output (one per line)
+          <Label>Which values should the result include?</Label>
+          <p className="text-xs text-muted-foreground mt-1 mb-2">
+            Pick none to include everything.
           </p>
+
+          {upstreamFields.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2 text-center border rounded border-dashed">
+              Connect an earlier step to choose values
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {upstreamFields.map((field) => {
+                const checked = fields.includes(field.path);
+                return (
+                  <label
+                    key={field.path}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <Switch
+                      checked={checked}
+                      onCheckedChange={(on) =>
+                        updateFields(
+                          on
+                            ? [...fields, field.path]
+                            : fields.filter((f) => f !== field.path)
+                        )
+                      }
+                    />
+                    <span className="flex-1">{field.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {field.source}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {(format === "text" || format === "markdown") && (
         <div>
-          <Label>Template</Label>
-          <Textarea
+          <Label>Write the result</Label>
+          <p className="text-xs text-muted-foreground mt-1 mb-2">
+            Type the wording you want, and drop in values from earlier steps.
+          </p>
+          <TemplateInput
             value={(config.template as string) || ""}
-            onChange={(e) => onChange("template", e.target.value)}
+            onChange={(next) => onChange("template", next)}
+            fields={upstreamFields}
             placeholder={
               format === "markdown"
-                ? "# Title\n\n{{summary}}\n\n## Details\n{{details}}"
-                : "Result: {{result}}"
+                ? "# Summary\n\nHere is what we found."
+                : "Result: "
             }
-            className="mt-1"
+            multiline
             rows={6}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Use {"{{variableName}}"} for dynamic values
-          </p>
         </div>
       )}
     </div>
@@ -864,7 +1205,11 @@ interface IntegrationDefinition {
   actions: IntegrationAction[];
 }
 
-function IntegrationNodeConfig({ config, onChange }: ConfigProps) {
+function IntegrationNodeConfig({
+  config,
+  onChange,
+  fields = [],
+}: ConfigProps) {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [integrations, setIntegrations] = useState<IntegrationDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1033,19 +1378,19 @@ function IntegrationNodeConfig({ config, onChange }: ConfigProps) {
 
       {selectedAction?.inputSchema && Object.keys(selectedAction.inputSchema).length > 0 && (
         <div className="space-y-3">
-          <Label>Action Inputs</Label>
+          <Label>Details for this action</Label>
           {Object.entries(selectedAction.inputSchema).map(([key, schema]) => (
             <div key={key} className="space-y-1">
               <Label className="text-xs font-normal">
-                {key}
+                {humanizeFieldName(key)}
                 {schema.required && <span className="text-destructive ml-1">*</span>}
               </Label>
               {schema.type === "string" && (
-                <Input
+                <TemplateInput
                   value={(inputConfig[key] as string) || ""}
-                  onChange={(e) => handleInputChange(key, e.target.value)}
-                  placeholder={schema.description || `Enter ${key}`}
-                  className="h-8"
+                  onChange={(next) => handleInputChange(key, next)}
+                  fields={fields}
+                  placeholder={schema.description || `Enter ${humanizeFieldName(key)}`}
                 />
               )}
               {schema.type === "number" && (
@@ -1067,40 +1412,36 @@ function IntegrationNodeConfig({ config, onChange }: ConfigProps) {
                 </div>
               )}
               {(schema.type === "array" || schema.type === "object") && (
-                <Textarea
-                  value={
-                    inputConfig[key]
-                      ? JSON.stringify(inputConfig[key], null, 2)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    try {
-                      const parsed = e.target.value ? JSON.parse(e.target.value) : undefined;
-                      handleInputChange(key, parsed);
-                    } catch {
-                      // Allow invalid JSON while typing
+                <div className="rounded-md border p-2">
+                  <ValueEditor
+                    value={
+                      inputConfig[key] ?? (schema.type === "array" ? [] : {})
                     }
-                  }}
-                  placeholder={schema.description || `Enter ${key} as JSON`}
-                  className="font-mono text-xs"
-                  rows={3}
-                />
+                    onChange={(next) => handleInputChange(key, next)}
+                    kind={schema.type === "array" ? "list" : "group"}
+                    renderTextInput={({ value, onChange: setText, placeholder }) => (
+                      <TemplateInput
+                        value={value}
+                        onChange={setText}
+                        fields={fields}
+                        placeholder={placeholder}
+                      />
+                    )}
+                  />
+                </div>
               )}
               {schema.description && schema.type !== "boolean" && (
                 <p className="text-xs text-muted-foreground">{schema.description}</p>
               )}
             </div>
           ))}
-          <p className="text-xs text-muted-foreground">
-            Use {"{{variableName}}"} for dynamic values from previous nodes
-          </p>
         </div>
       )}
     </div>
   );
 }
 
-function WebhookNodeConfig({ config, onChange }: ConfigProps) {
+function WebhookNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
   const headers = config.headers as Record<string, string> | undefined;
   const headersList: { key: string; value: string }[] = headers
     ? Object.entries(headers).map(([key, value]) => ({ key, value }))
@@ -1132,20 +1473,19 @@ function WebhookNodeConfig({ config, onChange }: ConfigProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Webhook URL</Label>
-        <Input
-          value={(config.url as string) || ""}
-          onChange={(e) => onChange("url", e.target.value)}
-          placeholder="https://example.com/webhook"
-          className="mt-1"
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Use {"{{variableName}}"} for dynamic values
-        </p>
+        <Label>Where should we send it?</Label>
+        <div className="mt-1">
+          <TemplateInput
+            value={(config.url as string) || ""}
+            onChange={(next) => onChange("url", next)}
+            fields={fields}
+            placeholder="https://example.com/webhook"
+          />
+        </div>
       </div>
 
       <div>
-        <Label>Method</Label>
+        <Label>What should we do there?</Label>
         <Select
           value={(config.method as string) || "POST"}
           onValueChange={(v) => onChange("method", v)}
@@ -1154,11 +1494,11 @@ function WebhookNodeConfig({ config, onChange }: ConfigProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="GET">GET</SelectItem>
-            <SelectItem value="POST">POST</SelectItem>
-            <SelectItem value="PUT">PUT</SelectItem>
-            <SelectItem value="PATCH">PATCH</SelectItem>
-            <SelectItem value="DELETE">DELETE</SelectItem>
+            {HTTP_METHODS.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -1207,28 +1547,28 @@ function WebhookNodeConfig({ config, onChange }: ConfigProps) {
       </div>
 
       <div>
-        <Label>Payload Template</Label>
-        <Textarea
-          value={
-            config.payloadTemplate
-              ? JSON.stringify(config.payloadTemplate, null, 2)
-              : ""
-          }
-          onChange={(e) => {
-            try {
-              const parsed = e.target.value ? JSON.parse(e.target.value) : undefined;
-              onChange("payloadTemplate", parsed);
-            } catch {
-              // Allow invalid JSON while typing
-            }
-          }}
-          placeholder='{"data": "{{inputValue}}"}'
-          className="mt-1 font-mono text-sm"
-          rows={4}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          JSON payload to send. Use {"{{variableName}}"} for dynamic values.
+        <Label>What should we send?</Label>
+        <p className="text-xs text-muted-foreground mt-1 mb-2">
+          Name each piece of information and choose what goes in it.
         </p>
+        <ValueEditor
+          value={(config.payloadTemplate as Record<string, unknown>) ?? {}}
+          onChange={(next) =>
+            onChange(
+              "payloadTemplate",
+              next && Object.keys(next as object).length > 0 ? next : undefined
+            )
+          }
+          kind="group"
+          renderTextInput={({ value, onChange: setText, placeholder }) => (
+            <TemplateInput
+              value={value}
+              onChange={setText}
+              fields={fields}
+              placeholder={placeholder}
+            />
+          )}
+        />
       </div>
 
       <div>

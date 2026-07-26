@@ -53,6 +53,13 @@ import { SchedulesPanel } from "./SchedulesPanel";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  RunForm,
+  inputFieldsOf,
+  initialRunValues,
+  validateRunValues,
+  type RunValues,
+} from "@/components/inputs/RunForm";
 
 export function Header() {
   const router = useRouter();
@@ -75,6 +82,7 @@ export function Header() {
     hasConnectedNodes,
     exportWorkflow,
     importWorkflow,
+    nodes,
   } = useWorkflowStore();
   const { toast } = useToast();
 
@@ -85,12 +93,16 @@ export function Header() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [executionHistoryOpen, setExecutionHistoryOpen] = useState(false);
   const [schedulesOpen, setSchedulesOpen] = useState(false);
-  const [runInput, setRunInput] = useState("{}");
+  const [runValues, setRunValues] = useState<RunValues>({});
+  const [runErrors, setRunErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const workflowName = workflow?.name || "Untitled Workflow";
+
+  // What this workflow asks for before it can run.
+  const runFields = inputFieldsOf(nodes);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -143,33 +155,44 @@ export function Header() {
     }
   };
 
-  const handleRun = async () => {
+  const runWith = async (input: Record<string, unknown>) => {
     try {
-      const input = JSON.parse(runInput);
-      setRunDialogOpen(false);
       await executeWorkflow(input);
       toast({
         title: "Success",
         description: "Workflow executed successfully",
       });
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        toast({
-          title: "Error",
-          description: "Invalid JSON input",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Failed to execute workflow",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to execute workflow",
+        variant: "destructive",
+      });
     }
+  };
+
+  // A workflow that asks for nothing shouldn't interrupt with a dialog.
+  const startRun = async () => {
+    if (runFields.length === 0) {
+      await runWith({});
+      return;
+    }
+
+    setRunValues(initialRunValues(runFields));
+    setRunErrors({});
+    setRunDialogOpen(true);
+  };
+
+  const handleRun = async () => {
+    const errors = validateRunValues(runFields, runValues);
+    if (Object.keys(errors).length > 0) {
+      setRunErrors(errors);
+      return;
+    }
+
+    setRunDialogOpen(false);
+    await runWith(runValues);
   };
 
   const handleQuickSave = async () => {
@@ -378,7 +401,7 @@ export function Header() {
 
           {/* Run Button - Primary action */}
           <Button
-            onClick={() => setRunDialogOpen(true)}
+            onClick={startRun}
             disabled={isExecuting}
             className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-md"
           >
@@ -539,17 +562,21 @@ export function Header() {
       <Dialog open={runDialogOpen} onOpenChange={setRunDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Run Workflow</DialogTitle>
+            <DialogTitle>Before we start</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <label className="text-sm font-medium mb-2 block">
-              Input (JSON)
-            </label>
-            <textarea
-              className="w-full h-32 p-3 border rounded-lg font-mono text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              value={runInput}
-              onChange={(e) => setRunInput(e.target.value)}
-              placeholder='{"text": "Hello, world!"}'
+          <div className="py-2 max-h-[60vh] overflow-y-auto">
+            <p className="text-sm text-muted-foreground mb-4">
+              This workflow needs a few details to run.
+            </p>
+            <RunForm
+              fields={runFields}
+              values={runValues}
+              onChange={(next) => {
+                setRunValues(next);
+                // Clear a field's error as soon as the user edits anything.
+                if (Object.keys(runErrors).length > 0) setRunErrors({});
+              }}
+              errors={runErrors}
             />
           </div>
           <DialogFooter>
@@ -558,7 +585,7 @@ export function Header() {
             </Button>
             <Button onClick={handleRun} disabled={isExecuting} className="gap-2">
               <Play className="h-4 w-4" />
-              {isExecuting ? "Running..." : "Execute"}
+              {isExecuting ? "Running..." : "Run workflow"}
             </Button>
           </DialogFooter>
         </DialogContent>
