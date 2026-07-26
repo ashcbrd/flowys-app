@@ -36,16 +36,25 @@ export function PresetPicker({ onApply }: PresetPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<ApiPreset | null>(null);
   const [value, setValue] = React.useState("");
+  const [extras, setExtras] = React.useState<Record<string, string>>({});
 
   const close = () => {
     setOpen(false);
     setSelected(null);
     setValue("");
+    setExtras({});
   };
 
+  // Every field in the dialog is needed for the request to succeed, so the button
+  // stays disabled until they're all answered rather than writing a config that
+  // fails on the first run.
+  const complete =
+    Boolean(value.trim()) &&
+    (selected?.extraFields || []).every((f) => extras[f.token]?.trim());
+
   const confirm = () => {
-    if (!selected || !value.trim()) return;
-    onApply(applyPreset(selected, value.trim()));
+    if (!selected || !complete) return;
+    onApply(applyPreset(selected, value.trim(), extras));
     close();
   };
 
@@ -119,6 +128,26 @@ export function PresetPicker({ onApply }: PresetPickerProps) {
                   />
                 </div>
 
+                {(selected.extraFields || []).map((field) => (
+                  <div key={field.token}>
+                    <Label htmlFor={`preset-${field.token}`}>{field.label}</Label>
+                    <p className="text-xs text-muted-foreground mt-1 mb-2">
+                      {field.help}
+                    </p>
+                    <Input
+                      id={`preset-${field.token}`}
+                      value={extras[field.token] || ""}
+                      placeholder={field.placeholder}
+                      onChange={(e) =>
+                        setExtras((prev) => ({
+                          ...prev,
+                          [field.token]: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+
                 <div className="rounded-lg border bg-muted/40 p-3">
                   <p className="text-xs font-medium mb-1 flex items-center gap-1.5">
                     <ExternalLink className="h-3 w-3" />
@@ -130,9 +159,8 @@ export function PresetPicker({ onApply }: PresetPickerProps) {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  We&apos;ll fill in the rest. You can change any of it afterwards
-                  — some presets have a placeholder you&apos;ll want to replace,
-                  like a database ID.
+                  We&apos;ll fill in the rest, and you can change any of it
+                  afterwards.
                 </p>
               </div>
 
@@ -140,7 +168,7 @@ export function PresetPicker({ onApply }: PresetPickerProps) {
                 <Button variant="outline" onClick={() => setSelected(null)}>
                   Back
                 </Button>
-                <Button onClick={confirm} disabled={!value.trim()}>
+                <Button onClick={confirm} disabled={!complete}>
                   Set it up
                 </Button>
               </DialogFooter>

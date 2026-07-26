@@ -440,6 +440,11 @@ export const TEMPLATES: WorkflowTemplate[] = [
           userPromptTemplate:
             "Week of {{weekOf}}. Notes:\n\n{{notes}}\n\nWrite the digest.",
           properties: {
+            period: {
+              type: "string",
+              description:
+                "The period this digest covers, e.g. \"week of 3 March\". Use what you were given.",
+            },
             headline: {
               type: "string",
               description: "The one thing the team should know",
@@ -467,7 +472,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
             config: {
               format: "markdown",
               template:
-                "# Feedback digest — week of {{weekOf}}\n\n**{{headline}}**\n\n{{trends}}\n\n### Needs a decision\n{{decisionsNeeded}}\n\n> {{quoteOfTheWeek}}",
+                "# Feedback digest — {{period}}\n\n**{{headline}}**\n\n{{trends}}\n\n### Needs a decision\n{{decisionsNeeded}}\n\n> {{quoteOfTheWeek}}",
             },
           },
         },
