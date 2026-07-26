@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // Live tests need real keys and network; run them with `npm run test:live`.
+    exclude: ["tests/live/**"],
     // `lib/db/connection.ts` throws at import time when these are unset, and the
     // engine's import chain reaches it via the integration node handler. Nothing
     // here connects to anything — the values only need to exist.

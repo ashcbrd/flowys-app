@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { INTEGRATIONS_ENABLED } from "@/lib/features";
-import { isKnownModel, resolveModel, DEFAULT_MODEL, type ProviderId } from "@/lib/providers/models";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -46,15 +45,10 @@ YOUR CAPABILITIES:
 NODE TYPES (use exactly these type values):
 - "input" - Accepts workflow input. Config: { fields: [{ name: string, type: "string"|"number"|"boolean"|"json", required?: boolean, default?: any }] }
 - "api" - HTTP requests. Config: { url: string, method: "GET"|"POST"|"PUT"|"DELETE", headers?: object, body?: string, responseMapping?: object }
-- "ai" - LLM prompts. Config: { provider: "openai"|"anthropic", model: string, systemPrompt?: string, userPromptTemplate: string, temperature?: number, maxTokens?: number, outputSchema: { type: "object", properties: object, required: string[] } }
+- "ai" - LLM prompts. Config: { systemPrompt?: string, userPromptTemplate: string, temperature?: number, maxTokens?: number, outputSchema: { type: "object", properties: object, required: string[] } }
+  NEVER include "provider" or "model" on an ai node. The system chooses which AI
+  runs each step; naming one would be ignored at best and wrong at worst.
 
-MODEL IDS - USE ONLY THESE EXACT STRINGS:
-Never invent a model ID and never add a date suffix. Any other value fails at run
-time with a 404 and the workflow you generated will not work.
-  provider "anthropic" -> "claude-opus-5" (default), "claude-sonnet-5", "claude-haiku-4-5"
-  provider "openai"    -> "gpt-4o" (default), "gpt-4o-mini"
-Default to provider "anthropic" with model "claude-opus-5" unless the user asks
-for something else. The model must match its provider.
 - "logic" - Data operations. Config: { operation: "filter"|"map"|"reduce"|"condition"|"transform", condition?: string, expression?: string, mappings?: object }
 - "output" - Final result. Config: { format: "json"|"text"|"markdown", template?: string, fields?: string[] }
 
@@ -116,37 +110,18 @@ IMPORTANT:
 Always respond with ONLY valid JSON.`;
 
 /**
- * Repair AI-step model IDs on a generated workflow.
+ * Strip any provider or model the assistant volunteered on an AI step.
  *
- * The prompt pins the allowed IDs, but a hallucinated or retired one would put a
- * step on the user's canvas that fails with a 404 the moment they press Run —
- * which reads as "the app is broken", not "one setting is wrong".
+ * The prompt tells it not to emit these, but a stored provider/model would be
+ * misleading in the saved workflow — the engine resolves the target itself.
  */
 function normalizeAiModels(nodes: unknown[]): unknown[] {
   return nodes.map((node) => {
-    const n = node as {
-      type?: string;
-      data?: { config?: Record<string, unknown> };
-    };
-
+    const n = node as { type?: string; data?: { config?: Record<string, unknown> } };
     if (n?.type !== "ai" || !n.data?.config) return node;
 
-    const config = n.data.config;
-    const provider: ProviderId =
-      config.provider === "openai" ? "openai" : "anthropic";
-    const requested = config.model as string | undefined;
-
-    // Map a retired ID to its replacement; fall back to the provider default for
-    // anything we don't recognise at all.
-    const resolved = resolveModel(requested, provider);
-    const model = isKnownModel(resolved) ? resolved : DEFAULT_MODEL[provider];
-
-    if (model === requested && config.provider === provider) return node;
-
-    return {
-      ...n,
-      data: { ...n.data, config: { ...config, provider, model } },
-    };
+    const { provider: _p, model: _m, ...rest } = n.data.config;
+    return { ...n, data: { ...n.data, config: rest } };
   });
 }
 

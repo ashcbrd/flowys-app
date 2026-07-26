@@ -1,6 +1,7 @@
 import type { NodeHandler, NodeContext, NodeResult, AiNodeConfig } from "./types";
 import { executePrompt, type PromptMessage, type OutputSchema } from "@/lib/providers";
 import { interpolateVariables } from "@/lib/utils/template";
+import { resolveAiTarget } from "@/lib/providers/models";
 
 export class AiNodeHandler implements NodeHandler {
   type = "ai" as const;
@@ -42,10 +43,14 @@ CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
         content: this.sanitizePrompt(userPrompt),
       });
 
+      // The provider and model are fixed for this deployment, so a stored value
+      // (possibly a retired model, or a provider with no key) is ignored.
+      const target = resolveAiTarget();
+
       const result = await executePrompt(
-        config.provider,
+        target.provider,
         {
-          model: config.model,
+          model: target.model,
           temperature: config.temperature ?? 0.7,
           maxTokens: config.maxTokens ?? 16384,
         },

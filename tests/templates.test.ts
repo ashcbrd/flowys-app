@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { TEMPLATES } from "@/lib/templates";
-import { MODELS, isKnownModel } from "@/lib/providers/models";
 
 /**
  * Runs every shipped template through the real executor.
@@ -124,27 +123,14 @@ describe("every template is structurally sound", () => {
   );
 
   it.each(TEMPLATES.map((t) => [t.id, t] as const))(
-    "%s names only models that currently exist",
+    "%s pins no provider or model",
     (_id, template) => {
+      // The engine resolves which AI to use, so a template that named one could
+      // pin something the deployment can't run.
       for (const node of template.workflow.nodes) {
         if (node.type !== "ai") continue;
-        const model = node.data.config.model as string;
-        expect(isKnownModel(model), `${model} is not a current model`).toBe(true);
-      }
-    }
-  );
-
-  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
-    "%s pairs each model with its own provider",
-    (_id, template) => {
-      for (const node of template.workflow.nodes) {
-        if (node.type !== "ai") continue;
-        const { provider, model } = node.data.config as {
-          provider: string;
-          model: string;
-        };
-        const known = MODELS.find((m) => m.id === model);
-        expect(known?.provider, `${model} under ${provider}`).toBe(provider);
+        expect(node.data.config).not.toHaveProperty("provider");
+        expect(node.data.config).not.toHaveProperty("model");
       }
     }
   );
@@ -260,6 +246,38 @@ describe("every template runs end to end", () => {
 });
 
 describe("template failures are explained, not just reported", () => {
+  it("names the key when the provider rejects credentials", async () => {
+    executePrompt.mockRejectedValue(new Error("401 Incorrect API key provided"));
+
+    const template = TEMPLATES[0];
+    const executor = createExecutor(
+      template.workflow.nodes as never,
+      template.workflow.edges as never
+    );
+
+    const result = await executor.execute(stubInput(template));
+
+    expect(result.success).toBe(false);
+    expect(result.errorAnalysis?.possibleCauses.join(" ")).toMatch(
+      /key is missing, wrong, or expired/
+    );
+  });
+
+  it("names rate limiting when the provider throttles", async () => {
+    executePrompt.mockRejectedValue(new Error("429 rate limit exceeded"));
+
+    const template = TEMPLATES[0];
+    const executor = createExecutor(
+      template.workflow.nodes as never,
+      template.workflow.edges as never
+    );
+
+    const result = await executor.execute(stubInput(template));
+
+    expect(result.success).toBe(false);
+    expect(result.errorAnalysis?.suggestedFixes.join(" ")).toMatch(/Wait a minute/);
+  });
+
   it("attaches a diagnosis naming the step that failed", async () => {
     executePrompt.mockRejectedValue(new Error("404 model_not_found"));
 

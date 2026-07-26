@@ -26,9 +26,6 @@ export interface WorkflowTemplate {
   workflow: GeneratedWorkflow;
 }
 
-const MODEL = "claude-opus-5";
-const PROVIDER = "anthropic";
-
 /** Keeps node/edge boilerplate out of each template. */
 function ai(
   id: string,
@@ -48,8 +45,8 @@ function ai(
     data: {
       label,
       config: {
-        provider: PROVIDER,
-        model: MODEL,
+        // No provider or model: the engine resolves which AI to use, so a
+        // template can't pin one that later stops being available.
         systemPrompt: config.systemPrompt,
         userPromptTemplate: config.userPromptTemplate,
         temperature: config.temperature ?? 0.3,
