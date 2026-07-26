@@ -45,6 +45,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/shared/Navbar";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 
 interface IntegrationConfig {
   id: string;
@@ -107,7 +109,7 @@ const categoryLabels: Record<string, string> = {
   other: "Other",
 };
 
-export default function IntegrationsPage() {
+function IntegrationsWorkspace() {
   const [integrations, setIntegrations] = useState<IntegrationDefinition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -795,4 +797,39 @@ export default function IntegrationsPage() {
       </Dialog>
     </div>
   );
+}
+
+/**
+ * While integrations are disabled the workspace isn't mounted at all, so it can't
+ * fire requests against OAuth apps that don't exist yet.
+ */
+export default function IntegrationsPage() {
+  if (!INTEGRATIONS_ENABLED) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+            <Plug className="h-7 w-7 text-muted-foreground" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold">
+              App connections — {COMING_SOON_LABEL}
+            </h1>
+            <p className="text-muted-foreground">
+              Linking Flowys to Slack, Notion, GitHub and the rest is on the way.
+              Everything else works today: build a workflow, add AI steps, call a
+              web address, and put it on a schedule.
+            </p>
+          </div>
+
+          <Button asChild>
+            <Link href="/workflow">Back to my workflows</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <IntegrationsWorkspace />;
 }

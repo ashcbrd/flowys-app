@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkflowStore } from "@/store/workflow";
+import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 
 interface NodeType {
   type: string;
@@ -27,6 +28,8 @@ interface NodeType {
   icon: React.ReactNode;
   color: string;
   gradient: string;
+  /** Visible but not usable yet. */
+  comingSoon?: boolean;
 }
 
 const nodeTypes: NodeType[] = [
@@ -69,6 +72,7 @@ const nodeTypes: NodeType[] = [
     icon: <Plug className="h-5 w-5" />,
     color: "bg-indigo-500",
     gradient: "from-indigo-400 to-indigo-600",
+    comingSoon: !INTEGRATIONS_ENABLED,
   },
   {
     type: "webhook",
@@ -99,6 +103,15 @@ export function NodeDock() {
   const isAtNodeLimit = nodeCount >= MAX_NODE_COUNT;
 
   const onDragStart = (event: DragEvent, node: NodeType) => {
+    if (node.comingSoon) {
+      event.preventDefault();
+      toast({
+        title: `${node.label} — ${COMING_SOON_LABEL}`,
+        description: "Connecting other apps isn't ready yet. Everything else works.",
+      });
+      return;
+    }
+
     if (isAtNodeLimit) {
       event.preventDefault();
       toast({
@@ -142,7 +155,7 @@ export function NodeDock() {
               <Tooltip key={node.type}>
                 <TooltipTrigger asChild>
                   <div
-                    draggable
+                    draggable={!node.comingSoon}
                     onDragStart={(e) => onDragStart(e, node)}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}
@@ -154,7 +167,9 @@ export function NodeDock() {
                       "flex flex-col items-center justify-center gap-1 p-2 rounded-xl",
                       "transition-all duration-200 ease-out",
                       "select-none relative",
-                      "cursor-grab hover:bg-white/50 dark:hover:bg-white/10 active:cursor-grabbing active:scale-95"
+                      node.comingSoon
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-grab hover:bg-white/50 dark:hover:bg-white/10 active:cursor-grabbing active:scale-95"
                     )}
                   >
                     {/* Icon container with gradient */}
@@ -186,8 +201,19 @@ export function NodeDock() {
                   sideOffset={8}
                   className="bg-background/95 backdrop-blur-sm"
                 >
-                  <p className="font-medium">{node.label}</p>
-                  <p className="text-xs text-muted-foreground">{node.description}</p>
+                  <p className="font-medium">
+                    {node.label}
+                    {node.comingSoon && (
+                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                        {COMING_SOON_LABEL}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {node.comingSoon
+                      ? "Connecting other apps isn't ready yet."
+                      : node.description}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             );

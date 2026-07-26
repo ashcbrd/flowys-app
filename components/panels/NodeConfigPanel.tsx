@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { X, Trash2, Plus, GripVertical, Loader2, ExternalLink, Save, Check } from "lucide-react";
+import { X, Trash2, Plus, GripVertical, Loader2, ExternalLink, Save, Check, Plug } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,15 @@ import { KeyValueEditor } from "@/components/inputs/KeyValueEditor";
 import { TemplateInput } from "@/components/inputs/TemplateInput";
 import { ConditionBuilder } from "@/components/inputs/ConditionBuilder";
 import { availableFieldsFor, itemFieldsFor, type AvailableField } from "@/lib/utils/fields";
+import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
+import {
+  modelsFor,
+  isKnownModel,
+  resolveModel,
+  DEFAULT_MODEL,
+  RETIRED_MODELS,
+  type ProviderId,
+} from "@/lib/providers/models";
 import {
   FIELD_TYPES,
   SCHEMA_TYPES,
@@ -645,6 +654,78 @@ interface SchemaProperty {
   description: string;
 }
 
+/**
+ * Choose which AI runs a step.
+ *
+ * A free-text box here was the single most breakage-prone field in the app: a
+ * typo or a model that has since retired fails at run time with a 404. The list
+ * only offers IDs that currently exist, and a workflow saved with a retired ID
+ * gets an in-place upgrade rather than a run-time failure.
+ */
+function ModelPicker({
+  provider,
+  model,
+  onChange,
+}: {
+  provider: string;
+  model: string | undefined;
+  onChange: (model: string) => void;
+}) {
+  const providerId: ProviderId = provider === "openai" ? "openai" : "anthropic";
+  const options = modelsFor(providerId);
+  const retiredReplacement = model ? RETIRED_MODELS[model] : undefined;
+  const unknown = Boolean(model) && !isKnownModel(model);
+
+  return (
+    <div>
+      <Label>Which model?</Label>
+      <Select
+        value={isKnownModel(model) ? model : undefined}
+        onValueChange={onChange}
+      >
+        <SelectTrigger className="mt-1">
+          <SelectValue placeholder={`Choose a model (default: ${DEFAULT_MODEL[providerId]})`} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {isKnownModel(model) && (
+        <p className="text-xs text-muted-foreground mt-1">
+          {options.find((o) => o.id === model)?.help}
+        </p>
+      )}
+
+      {unknown && (
+        <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/10 p-2 space-y-2">
+          <p className="text-xs">
+            {retiredReplacement
+              ? "This step uses a model that has been retired, so it will fail when it runs."
+              : "This step uses a model we don't recognise, so it may fail when it runs."}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              onChange(
+                retiredReplacement ?? resolveModel(undefined, providerId)
+              )
+            }
+          >
+            Switch to{" "}
+            {retiredReplacement ?? DEFAULT_MODEL[providerId]}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
   const outputSchema = config.outputSchema as {
     type?: string;
@@ -710,15 +791,11 @@ function AiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
         </Select>
       </div>
 
-      <div>
-        <Label>Model</Label>
-        <Input
-          value={(config.model as string) || ""}
-          onChange={(e) => onChange("model", e.target.value)}
-          placeholder="gpt-4o or claude-sonnet-4-20250514"
-          className="mt-1"
-        />
-      </div>
+      <ModelPicker
+        provider={(config.provider as string) || "anthropic"}
+        model={config.model as string | undefined}
+        onChange={(next) => onChange("model", next)}
+      />
 
       <div>
         <Label>How should the AI behave?</Label>
@@ -1205,7 +1282,27 @@ interface IntegrationDefinition {
   actions: IntegrationAction[];
 }
 
-function IntegrationNodeConfig({
+function IntegrationNodeConfig(props: ConfigProps) {
+  if (!INTEGRATIONS_ENABLED) {
+    return (
+      <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+        <Plug className="h-5 w-5 mx-auto text-muted-foreground" />
+        <p className="text-sm font-medium">
+          App connections — {COMING_SOON_LABEL}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Linking Flowys to other apps isn&apos;t ready yet, so this step
+          can&apos;t be set up or run. You can delete it, or leave it and finish
+          the rest of your workflow.
+        </p>
+      </div>
+    );
+  }
+
+  return <IntegrationNodeConfigForm {...props} />;
+}
+
+function IntegrationNodeConfigForm({
   config,
   onChange,
   fields = [],

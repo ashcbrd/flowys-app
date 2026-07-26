@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type { LucideIcon } from "lucide-react";
+import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 
 interface NavbarProps {
   title: string;
@@ -91,12 +92,22 @@ export function Navbar({
               <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
                 Settings
               </div>
-              <DropdownMenuItem asChild>
-                <Link href="/integrations">
+              {INTEGRATIONS_ENABLED ? (
+                <DropdownMenuItem asChild>
+                  <Link href="/integrations">
+                    <Plug className="h-4 w-4" />
+                    App Integrations
+                  </Link>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem disabled>
                   <Plug className="h-4 w-4" />
-                  App Integrations
-                </Link>
-              </DropdownMenuItem>
+                  <span className="flex-1">App Integrations</span>
+                  <span className="text-xs text-muted-foreground">
+                    {COMING_SOON_LABEL}
+                  </span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link href="/settings/webhooks">
                   <Webhook className="h-4 w-4" />
