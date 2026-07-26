@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { LLMProvider, LLMConfig, PromptMessage, LLMResponse, OutputSchema } from "./types";
+import { resolveModel } from "./models";
 
 export class AnthropicProvider implements LLMProvider {
   name = "anthropic";
@@ -34,8 +35,12 @@ export class AnthropicProvider implements LLMProvider {
       nonSystemMessages[nonSystemMessages.length - 1].content = userPrompt;
     }
 
+    // A retired ID fails with a 404 that reads like a broken workflow, so map it
+    // to the current replacement rather than passing it through.
+    const model = resolveModel(config.model, "anthropic");
+
     const response = await this.client.messages.create({
-      model: config.model || "claude-sonnet-4-20250514",
+      model,
       max_tokens: config.maxTokens ?? 16384,
       system: systemMessage?.content,
       messages: nonSystemMessages,

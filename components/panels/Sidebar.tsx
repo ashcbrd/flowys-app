@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileInput, Globe, Sparkles, GitBranch, FileOutput, ChevronLeft, ChevronRight, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 
 const nodeTypes = [
   {
@@ -90,30 +91,59 @@ export function Sidebar() {
       )}
 
       <div className={cn("space-y-2", collapsed && "mt-10")}>
-        {nodeTypes.map((node) => (
-          <div
-            key={node.type}
-            draggable
-            onDragStart={(e) => onDragStart(e, node.type)}
-            title={collapsed ? `${node.label}: ${node.description}` : undefined}
-            className={cn(
-              "flex items-center rounded-lg border cursor-grab",
-              "hover:border-primary hover:bg-accent transition-colors",
-              "active:cursor-grabbing",
-              collapsed ? "p-2 justify-center" : "gap-3 p-3"
-            )}
-          >
-            <div className={cn("p-2 rounded-md", node.color)}>
-              <node.icon className="h-4 w-4 text-white" />
-            </div>
-            {!collapsed && (
-              <div>
-                <p className="font-medium text-sm">{node.label}</p>
-                <p className="text-xs text-muted-foreground">{node.description}</p>
+        {nodeTypes.map((node) => {
+          const comingSoon =
+            node.type === "integration" && !INTEGRATIONS_ENABLED;
+
+          return (
+            <div
+              key={node.type}
+              draggable={!comingSoon}
+              onDragStart={(e) => {
+                if (comingSoon) {
+                  e.preventDefault();
+                  return;
+                }
+                onDragStart(e, node.type);
+              }}
+              title={
+                comingSoon
+                  ? `${node.label}: ${COMING_SOON_LABEL}`
+                  : collapsed
+                  ? `${node.label}: ${node.description}`
+                  : undefined
+              }
+              className={cn(
+                "flex items-center rounded-lg border",
+                comingSoon
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-grab hover:border-primary hover:bg-accent transition-colors active:cursor-grabbing",
+                collapsed ? "p-2 justify-center" : "gap-3 p-3"
+              )}
+            >
+              <div className={cn("p-2 rounded-md", node.color)}>
+                <node.icon className="h-4 w-4 text-white" />
               </div>
-            )}
-          </div>
-        ))}
+              {!collapsed && (
+                <div>
+                  <p className="font-medium text-sm">
+                    {node.label}
+                    {comingSoon && (
+                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                        {COMING_SOON_LABEL}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {comingSoon
+                      ? "Connecting other apps isn't ready yet."
+                      : node.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {!collapsed && (

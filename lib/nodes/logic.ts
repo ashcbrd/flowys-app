@@ -69,7 +69,7 @@ export class LogicNodeHandler implements NodeHandler {
     if (!data) {
       return {
         success: false,
-        error: "Filter needs a list of items to work with. The previous node didn't output any array data. Check that your API or data source is returning a list."
+        error: "This step keeps items from a list, but the step before it didn't produce a list. Click the previous step to see what it produced."
       };
     }
 
@@ -77,7 +77,7 @@ export class LogicNodeHandler implements NodeHandler {
     if (!condition) {
       return {
         success: false,
-        error: "Filter needs a condition to know what to keep. Click this node and add a condition like 'item.score > 80' in the settings."
+        error: "This step needs a rule to know which items to keep. Open it and build one with the dropdowns."
       };
     }
 
@@ -93,7 +93,7 @@ export class LogicNodeHandler implements NodeHandler {
     if (!data) {
       return {
         success: false,
-        error: "Map needs a list of items to transform. The previous node didn't output any array data. Check that your API or data source is returning a list."
+        error: "This step changes every item in a list, but the step before it didn't produce a list. Click the previous step to see what it produced."
       };
     }
 
@@ -139,7 +139,7 @@ export class LogicNodeHandler implements NodeHandler {
     if (!data) {
       return {
         success: false,
-        error: "Reduce needs a list of items to combine. The previous node didn't output any array data. Check that your API or data source is returning a list."
+        error: "This step combines a list into one value, but the step before it didn't produce a list. Click the previous step to see what it produced."
       };
     }
 
@@ -147,7 +147,7 @@ export class LogicNodeHandler implements NodeHandler {
     if (!expression) {
       return {
         success: false,
-        error: "Reduce needs an expression to know how to combine items. Click this node and add an expression like 'sum:score' or 'count' in the settings."
+        error: "This step needs to know how to combine the list. Open it and choose an option such as Add them up or Count them."
       };
     }
 

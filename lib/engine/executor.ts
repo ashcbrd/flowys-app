@@ -117,16 +117,21 @@ export class WorkflowExecutor {
     return inputs;
   }
 
+  /**
+   * Turn a raw failure into something the person running the workflow can act on.
+   *
+   * Rules are ordered most-specific first and the first match wins, so a
+   * recognisable failure (a retired model, a missing key, a rate limit) produces
+   * a precise explanation instead of the generic advice that used to apply to
+   * every error alike.
+   */
   private analyzeError(
     failedNode: NodeData,
     error: string,
     context: ExecutionContext,
     nodeInputs: Record<string, unknown>
   ): ErrorAnalysis {
-    const possibleCauses: string[] = [];
-    const suggestedFixes: string[] = [];
-
-    // Find nodes that depend on the failed node
+    // Steps downstream of the failure never ran.
     const affectedNodes: string[] = [];
     const visited = new Set<string>();
     const queue = [failedNode.id];
@@ -146,109 +151,170 @@ export class WorkflowExecutor {
       }
     }
 
-    // Analyze based on node type and error message
-    const errorLower = error.toLowerCase();
+    const stepName = failedNode.data.label || failedNode.type;
+    const lower = error.toLowerCase();
+    const receivedNothing = Object.keys(nodeInputs).length === 0;
 
-    // Input/Data issues
-    if (errorLower.includes("array") || errorLower.includes("list")) {
-      possibleCauses.push("The previous node didn't return data in the expected format (array/list)");
-      suggestedFixes.push("Check the output of the previous node - click on it to see what data it produced");
-      suggestedFixes.push("If using an API node, verify the API returns an array of items");
+    interface Rule {
+      when: boolean;
+      cause: string;
+      fixes: string[];
     }
 
-    if (errorLower.includes("undefined") || errorLower.includes("null") || errorLower.includes("missing")) {
-      possibleCauses.push("Required data is missing from the input");
-      suggestedFixes.push("Make sure all required fields are being passed from previous nodes");
-      suggestedFixes.push("Check if the field names match exactly (including capitalization)");
+    const rules: Rule[] = [
+      {
+        // The most common hard failure: a model that no longer exists.
+        when:
+          (lower.includes("404") || lower.includes("not_found")) &&
+          (lower.includes("model") || failedNode.type === "ai"),
+        cause: `The AI model this step is set to use doesn't exist any more.`,
+        fixes: [
+          `Open "${stepName}" and pick a model from the list.`,
+          "Models are retired over time. If this workflow is old, its model may have been withdrawn since you built it.",
+        ],
+      },
+      {
+        when:
+          lower.includes("401") ||
+          lower.includes("403") ||
+          lower.includes("api key") ||
+          lower.includes("unauthorized") ||
+          lower.includes("authentication"),
+        cause: "The service refused the request because the key is missing, wrong, or expired.",
+        fixes: [
+          "Check the key for this service in Settings.",
+          "If the key was recently rotated, paste the new one in.",
+        ],
+      },
+      {
+        when:
+          lower.includes("429") ||
+          lower.includes("rate limit") ||
+          lower.includes("quota") ||
+          lower.includes("too many requests"),
+        cause: "You've made too many requests in a short window, or the account is out of credit.",
+        fixes: [
+          "Wait a minute and run it again.",
+          "If this workflow processes a long list, break it into smaller batches.",
+          "Check whether the account behind this key still has credit.",
+        ],
+      },
+      {
+        when: lower.includes("timed out") || lower.includes("timeout"),
+        cause: "The step took longer than the time allowed.",
+        fixes: [
+          "Run it again — slow services often recover on the next attempt.",
+          "If this step handles a lot of data, split the work into smaller pieces.",
+        ],
+      },
+      {
+        when:
+          lower.includes("private or internal addresses") ||
+          lower.includes("ssrf"),
+        cause: "That web address points somewhere inside a private network, which isn't allowed.",
+        fixes: [
+          `Open "${stepName}" and use a public web address.`,
+        ],
+      },
+      {
+        when:
+          lower.includes("too long and incomplete") ||
+          lower.includes("unexpected end") ||
+          lower.includes("unterminated"),
+        cause: "The AI's answer was cut off before it finished.",
+        fixes: [
+          "Ask for fewer pieces of information in this step.",
+          "Ask for shorter answers in the instruction — for example, add \"keep each answer under a sentence\".",
+          "Raise \"Longest reply\" on this step.",
+        ],
+      },
+      {
+        when: lower.includes("json") || lower.includes("parse"),
+        cause: "The AI's answer didn't come back in the shape this step asked for.",
+        fixes: [
+          "Simplify what you're asking the AI to give back — fewer named pieces is more reliable.",
+          "Make the instruction more specific about what each piece should contain.",
+        ],
+      },
+      {
+        when: receivedNothing,
+        cause: "This step received nothing from the step before it.",
+        fixes: [
+          `Check that "${stepName}" is connected to an earlier step.`,
+          "Run the earlier step on its own to confirm it produces something.",
+        ],
+      },
+      {
+        when:
+          lower.includes("needs a list") ||
+          lower.includes("array") ||
+          lower.includes("list of items"),
+        cause: "This step works on a list, but what arrived wasn't a list.",
+        fixes: [
+          "Check what the previous step produced — click it to see its last result.",
+          "If the data comes from a web address, confirm that address returns several items rather than one.",
+        ],
+      },
+      {
+        when:
+          lower.includes("undefined") ||
+          lower.includes("null") ||
+          lower.includes("missing"),
+        cause: "A value this step needs wasn't there.",
+        fixes: [
+          `Open "${stepName}" and check every value it refers to still exists.`,
+          "Names must match exactly, including capital letters.",
+        ],
+      },
+      {
+        when: lower.includes("condition"),
+        cause: "The rule on this step couldn't be applied.",
+        fixes: [
+          `Open "${stepName}" and rebuild the rule using the dropdowns.`,
+          "Check that the value the rule compares still comes from an earlier step.",
+        ],
+      },
+      {
+        when:
+          lower.includes("network") ||
+          lower.includes("fetch") ||
+          lower.includes("econnrefused") ||
+          lower.includes("enotfound"),
+        cause: "The service couldn't be reached.",
+        fixes: [
+          "Check the web address is correct.",
+          "The service may be down — try again shortly.",
+        ],
+      },
+    ];
+
+    const matched = rules.find((rule) => rule.when);
+
+    const possibleCauses: string[] = [];
+    const suggestedFixes: string[] = [];
+
+    if (matched) {
+      possibleCauses.push(matched.cause);
+      suggestedFixes.push(...matched.fixes);
+    } else {
+      possibleCauses.push("Something went wrong in this step that we couldn't identify.");
+      suggestedFixes.push(
+        `Open "${stepName}" and check its settings.`,
+        "Click the step before it to see what it produced.",
+        "Try running the workflow again — some failures are temporary."
+      );
     }
 
-    // Connection issues
-    if (errorLower.includes("api") || errorLower.includes("fetch") || errorLower.includes("network")) {
-      possibleCauses.push("Unable to connect to an external service or API");
-      suggestedFixes.push("Check your internet connection");
-      suggestedFixes.push("Verify the API URL is correct and the service is running");
-      suggestedFixes.push("Check if any API keys are required and properly configured");
-    }
-
-    // AI/Model issues
-    if (errorLower.includes("ai") || errorLower.includes("model") || errorLower.includes("token")) {
-      possibleCauses.push("Issue with the AI model configuration or response");
-      suggestedFixes.push("Try simplifying your prompt or reducing the expected output size");
-      suggestedFixes.push("Check that your API key is valid and has sufficient credits");
-      suggestedFixes.push("Try using a different model (e.g., gpt-4o-mini for faster, cheaper responses)");
-    }
-
-    if (errorLower.includes("json") || errorLower.includes("parse")) {
-      possibleCauses.push("The AI response wasn't in the expected JSON format");
-      suggestedFixes.push("Simplify your output schema to reduce complexity");
-      suggestedFixes.push("Increase the max tokens setting to prevent cut-off responses");
-      suggestedFixes.push("Add clearer instructions in your prompt about the expected format");
-    }
-
-    // Configuration issues
-    if (errorLower.includes("config") || errorLower.includes("setting") || errorLower.includes("mapping")) {
-      possibleCauses.push("The node is not properly configured");
-      suggestedFixes.push("Click on the node to review and update its settings");
-      suggestedFixes.push("Make sure all required fields are filled in");
-    }
-
-    if (errorLower.includes("condition")) {
-      possibleCauses.push("The filter/condition expression may be incorrect");
-      suggestedFixes.push("Check the condition syntax - use format like 'item.score > 80'");
-      suggestedFixes.push("Make sure the field names in your condition exist in the data");
-    }
-
-    // Type-specific suggestions
-    if (failedNode.type === "api") {
-      if (!possibleCauses.length) {
-        possibleCauses.push("The API request may have failed or returned unexpected data");
-      }
-      suggestedFixes.push("Test the API endpoint separately to verify it works");
-      suggestedFixes.push("Check the API node's URL, method, and headers configuration");
-    }
-
-    if (failedNode.type === "ai") {
-      if (!possibleCauses.length) {
-        possibleCauses.push("The AI model may have encountered an issue processing your request");
-      }
-      suggestedFixes.push("Review your prompt template and make it clearer");
-      suggestedFixes.push("Check that variable placeholders like {{data}} match available inputs");
-    }
-
-    if (failedNode.type === "logic") {
-      if (!possibleCauses.length) {
-        possibleCauses.push("The data transformation or filtering logic encountered an issue");
-      }
-      suggestedFixes.push("Verify the input data structure matches what the operation expects");
-      suggestedFixes.push("For filter operations, ensure the condition references valid fields");
-    }
-
-    // Check for empty inputs
-    if (Object.keys(nodeInputs).length === 0) {
-      possibleCauses.unshift("This node received no input data from previous nodes");
-      suggestedFixes.unshift("Make sure this node is connected to a previous node that outputs data");
-    }
-
-    // Default suggestions if none were added
-    if (possibleCauses.length === 0) {
-      possibleCauses.push("An unexpected error occurred during execution");
-    }
-
-    if (suggestedFixes.length === 0) {
-      suggestedFixes.push("Review the node configuration by clicking on it");
-      suggestedFixes.push("Check the output of previous nodes for unexpected data");
-      suggestedFixes.push("Try running the workflow again - some errors are temporary");
-    }
-
-    // Generate summary
-    let summary = `The "${failedNode.data.label}" node (${failedNode.type}) failed to execute. `;
-    if (affectedNodes.length > 0) {
-      summary += `This also prevented ${affectedNodes.length} other node(s) from running.`;
+    let summary = `"${stepName}" couldn't finish.`;
+    if (affectedNodes.length === 1) {
+      summary += ` The step after it didn't run.`;
+    } else if (affectedNodes.length > 1) {
+      summary += ` The ${affectedNodes.length} steps after it didn't run.`;
     }
 
     return {
       summary,
-      failedNode: failedNode.data.label,
+      failedNode: stepName,
       failedNodeType: failedNode.type,
       possibleCauses,
       suggestedFixes,
