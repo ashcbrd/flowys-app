@@ -78,7 +78,7 @@ export function BaseNode({
           </p>
         ) : (
           <p className="text-sm text-muted-foreground/60 italic">
-            Click to configure
+            Click to set up
           </p>
         )}
 
@@ -119,8 +119,9 @@ export function BaseNode({
 function checkIfConfigured(config: Record<string, unknown>): boolean {
   if (!config || Object.keys(config).length === 0) return false;
 
-  // Check for AI node configuration
-  if (config.provider && config.model) return true;
+  // An AI step is set up once it has an instruction. The provider and model are
+  // resolved by the engine, so their absence no longer means "unconfigured".
+  if (config.userPromptTemplate) return true;
 
   // Check for API node configuration
   if (config.url) return true;
@@ -144,10 +145,22 @@ function checkIfConfigured(config: Record<string, unknown>): boolean {
 }
 
 function getNodePreview(config: Record<string, unknown>): string | null {
-  // AI node - show prompt preview
-  if (config.prompt) {
-    const prompt = config.prompt as string;
-    return prompt.length > 60 ? `"${prompt.slice(0, 60)}..."` : `"${prompt}"`;
+  // AI step — show the instruction. The last non-empty line is conventionally
+  // the ask ("Find the themes across all of these."); earlier lines are the data
+  // being handed over, which makes a poor summary.
+  const instruction = (config.userPromptTemplate ?? config.prompt) as
+    | string
+    | undefined;
+
+  if (typeof instruction === "string" && instruction.trim()) {
+    const lines = instruction
+      .replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, "…")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const ask = lines[lines.length - 1];
+    if (ask) return ask.length > 70 ? `${ask.slice(0, 70)}…` : ask;
   }
 
   // API node - show URL
@@ -203,14 +216,28 @@ function getNodePreview(config: Record<string, unknown>): string | null {
 }
 
 function getNodeSubtitle(config: Record<string, unknown>): string | null {
-  // AI node - show provider and model
-  if (config.provider && config.model) {
-    return `${config.provider} / ${config.model}`;
+  // AI step — how many named values it hands to the next step.
+  const schema = config.outputSchema as
+    | { properties?: Record<string, unknown> }
+    | undefined;
+
+  if (schema?.properties) {
+    const count = Object.keys(schema.properties).length;
+    if (count > 0) {
+      return count === 1 ? "Gives back 1 value" : `Gives back ${count} values`;
+    }
   }
 
-  // API node - show method
+  // API node - say what the request does rather than naming the HTTP verb.
   if (config.method) {
-    return config.method as string;
+    const plain: Record<string, string> = {
+      GET: "Reads data",
+      POST: "Sends data",
+      PUT: "Replaces data",
+      PATCH: "Updates data",
+      DELETE: "Deletes data",
+    };
+    return plain[config.method as string] ?? null;
   }
 
   // Integration node - show integration name

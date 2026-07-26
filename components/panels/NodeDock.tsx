@@ -115,8 +115,8 @@ export function NodeDock() {
     if (isAtNodeLimit) {
       event.preventDefault();
       toast({
-        title: "Node Limit Reached",
-        description: `This workflow already has ${MAX_NODE_COUNT} nodes.`,
+        title: "That's the limit",
+        description: `A workflow can have up to ${MAX_NODE_COUNT} steps.`,
         variant: "destructive",
       });
       return;
@@ -232,7 +232,7 @@ export function NodeDock() {
               : "text-muted-foreground"
           )}
         >
-          {nodeCount} / {MAX_NODE_COUNT} nodes
+          {nodeCount} / {MAX_NODE_COUNT} steps
         </div>
 
         {/* Subtle reflection effect */}
