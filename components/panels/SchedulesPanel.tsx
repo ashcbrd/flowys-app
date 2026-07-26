@@ -18,6 +18,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  RunForm,
+  inputFieldsOf,
+  initialRunValues,
+  validateRunValues,
+} from "@/components/inputs/RunForm";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -90,6 +96,8 @@ export function SchedulesPanel({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -101,11 +109,17 @@ export function SchedulesPanel({
     minute: 0,
     dayOfWeek: 1,
     dayOfMonth: 1,
-    input: "{}",
+    input: {} as Record<string, unknown>,
     enabled: true,
   });
 
   const { toast } = useToast();
+
+  // What the scheduled workflow asks for. Comes from the workflow being
+  // scheduled, which may not be the one open on the canvas.
+  const scheduleFields = inputFieldsOf(
+    workflows.find((w) => w.id === formData.workflowId)?.nodes
+  );
 
   useEffect(() => {
     if (open) {
@@ -150,7 +164,7 @@ export function SchedulesPanel({
       minute: 0,
       dayOfWeek: 1,
       dayOfMonth: 1,
-      input: "{}",
+      input: {},
       enabled: true,
     });
     setEditingSchedule(null);
@@ -173,7 +187,7 @@ export function SchedulesPanel({
       minute: 0,
       dayOfWeek: 1,
       dayOfMonth: 1,
-      input: JSON.stringify(schedule.input || {}, null, 2),
+      input: (schedule.input || {}) as Record<string, unknown>,
       enabled: schedule.enabled,
     });
     setCreateDialogOpen(true);
@@ -190,11 +204,16 @@ export function SchedulesPanel({
       return;
     }
 
-    let input: Record<string, unknown> = {};
-    try {
-      input = JSON.parse(formData.input);
-    } catch {
-      toast({ title: "Error", description: "Invalid JSON in input field", variant: "destructive" });
+    const input = formData.input;
+
+    const missing = validateRunValues(scheduleFields, input);
+    if (Object.keys(missing).length > 0) {
+      setInputErrors(missing);
+      toast({
+        title: "Almost there",
+        description: "Fill in the details this workflow needs.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -509,7 +528,18 @@ export function SchedulesPanel({
                 <Label>Workflow</Label>
                 <Select
                   value={formData.workflowId}
-                  onValueChange={(value) => setFormData({ ...formData, workflowId: value })}
+                  onValueChange={(value) => {
+                    // Seed the run details with the new workflow's defaults.
+                    const fields = inputFieldsOf(
+                      workflows.find((w) => w.id === value)?.nodes
+                    );
+                    setInputErrors({});
+                    setFormData({
+                      ...formData,
+                      workflowId: value,
+                      input: initialRunValues(fields),
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a workflow" />
@@ -644,16 +674,23 @@ export function SchedulesPanel({
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="input">Input (JSON)</Label>
-              <textarea
-                id="input"
-                className="w-full h-20 p-2 border rounded-md font-mono text-sm bg-background"
-                placeholder='{"key": "value"}'
-                value={formData.input}
-                onChange={(e) => setFormData({ ...formData, input: e.target.value })}
-              />
-            </div>
+            {scheduleFields.length > 0 && (
+              <div className="space-y-2">
+                <Label>Details for each run</Label>
+                <p className="text-xs text-muted-foreground">
+                  These values are used every time the schedule fires.
+                </p>
+                <RunForm
+                  fields={scheduleFields}
+                  values={formData.input}
+                  onChange={(next) => {
+                    setFormData({ ...formData, input: next });
+                    if (Object.keys(inputErrors).length > 0) setInputErrors({});
+                  }}
+                  errors={inputErrors}
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <Label htmlFor="enabled">Enabled</Label>

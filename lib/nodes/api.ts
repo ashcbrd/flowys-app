@@ -1,4 +1,5 @@
 import type { NodeHandler, NodeContext, NodeResult, ApiNodeConfig } from "./types";
+import { interpolateVariables, getNestedValue } from "@/lib/utils/template";
 
 /**
  * SSRF Protection: Check if a hostname resolves to a private/internal IP
@@ -90,7 +91,7 @@ export class ApiNodeHandler implements NodeHandler {
 
     try {
       // Validate URL
-      const url = this.interpolateVariables(config.url, context.inputs);
+      const url = interpolateVariables(config.url, context.inputs, "empty");
       if (!url || url === "https://api.example.com/data") {
         return {
           success: false,
@@ -129,7 +130,7 @@ export class ApiNodeHandler implements NodeHandler {
 
       if (config.headers) {
         for (const [key, value] of Object.entries(config.headers)) {
-          headers[key] = this.interpolateVariables(String(value), context.inputs);
+          headers[key] = interpolateVariables(String(value), context.inputs, "empty");
         }
       }
 
@@ -139,7 +140,7 @@ export class ApiNodeHandler implements NodeHandler {
       };
 
       if (config.body && ["POST", "PUT", "PATCH"].includes(config.method)) {
-        const body = this.interpolateVariables(config.body, context.inputs);
+        const body = interpolateVariables(config.body, context.inputs, "empty");
         fetchOptions.body = body;
         if (!headers["Content-Type"]) {
           headers["Content-Type"] = "application/json";
@@ -200,7 +201,7 @@ export class ApiNodeHandler implements NodeHandler {
       if (config.responseMapping && typeof data === "object" && data !== null) {
         output = {};
         for (const [outputKey, sourcePath] of Object.entries(config.responseMapping)) {
-          output[outputKey] = this.getNestedValue(data as Record<string, unknown>, sourcePath);
+          output[outputKey] = getNestedValue(data as Record<string, unknown>, sourcePath);
         }
       } else if (Array.isArray(data)) {
         // If data is an array, output it as 'data' for downstream nodes
@@ -232,26 +233,6 @@ export class ApiNodeHandler implements NodeHandler {
         error: `API request failed: ${message}`,
       };
     }
-  }
-
-  private interpolateVariables(template: string, inputs: Record<string, unknown>): string {
-    return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_, path) => {
-      const value = this.getNestedValue(inputs, path);
-      return value !== undefined ? String(value) : "";
-    });
-  }
-
-  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    const keys = path.split(".");
-    let current: unknown = obj;
-
-    for (const key of keys) {
-      if (current === null || current === undefined) return undefined;
-      if (typeof current !== "object") return undefined;
-      current = (current as Record<string, unknown>)[key];
-    }
-
-    return current;
   }
 
   validateConfig(config: Record<string, unknown>): { valid: boolean; errors?: string[] } {

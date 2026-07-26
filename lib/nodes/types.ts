@@ -19,13 +19,21 @@ export interface NodeHandler {
   validateConfig(config: Record<string, unknown>): { valid: boolean; errors?: string[] };
 }
 
+export interface InputField {
+  name: string;
+  type: "string" | "number" | "boolean" | "json";
+  required?: boolean;
+  default?: unknown;
+  /** Shown to whoever runs the workflow. Falls back to a humanized `name`. */
+  label?: string;
+  /** Optional one-line hint under the field. */
+  description?: string;
+  /** Example text inside the empty field. */
+  placeholder?: string;
+}
+
 export interface InputNodeConfig {
-  fields: Array<{
-    name: string;
-    type: "string" | "number" | "boolean" | "json";
-    required?: boolean;
-    default?: unknown;
-  }>;
+  fields: InputField[];
 }
 
 export interface ApiNodeConfig {

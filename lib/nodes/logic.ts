@@ -293,13 +293,17 @@ export class LogicNodeHandler implements NodeHandler {
       "<": (a, b) => Number(a) < Number(b),
       "<=": (a, b) => Number(a) <= Number(b),
       contains: (a, b) => String(a).includes(String(b)),
+      notContains: (a, b) => !String(a).includes(String(b)),
       startsWith: (a, b) => String(a).startsWith(String(b)),
       endsWith: (a, b) => String(a).endsWith(String(b)),
-      exists: (a) => a !== undefined && a !== null,
+      exists: (a) => a !== undefined && a !== null && a !== "",
       empty: (a) => !a || (Array.isArray(a) && a.length === 0),
     };
 
-    const match = condition.match(/^(\S+)\s+(==|===|!=|!==|>=|<=|>|<|contains|startsWith|endsWith|exists|empty)\s*(.*)$/);
+    // Longest operators first: an alternation starting `==|===` matches `==`
+    // against `===` and leaves `= value` as the right-hand side, which always
+    // compares false.
+    const match = condition.match(/^(\S+)\s+(===|==|!==|!=|>=|<=|>|<|notContains|contains|startsWith|endsWith|exists|empty)\s*(.*)$/);
     if (!match) {
       return Boolean(this.getNestedValue(context, condition));
     }
