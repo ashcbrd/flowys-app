@@ -21,6 +21,7 @@ import { ValueEditor } from "@/components/inputs/ValueEditor";
 import { KeyValueEditor } from "@/components/inputs/KeyValueEditor";
 import { TemplateInput } from "@/components/inputs/TemplateInput";
 import { ConditionBuilder } from "@/components/inputs/ConditionBuilder";
+import { PresetPicker } from "@/components/inputs/PresetPicker";
 import { availableFieldsFor, itemFieldsFor, type AvailableField } from "@/lib/utils/fields";
 import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 import {
@@ -480,6 +481,20 @@ function ApiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-dashed p-3 space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Connecting to Slack, Notion, Airtable, email, or somewhere else? Let us
+          fill in the technical parts.
+        </p>
+        <PresetPicker
+          onApply={(preset) => {
+            for (const [key, value] of Object.entries(preset)) {
+              onChange(key, value);
+            }
+          }}
+        />
+      </div>
+
       <div>
         <Label>Web address</Label>
         <div className="mt-1">

@@ -2,6 +2,7 @@
 
 import { Sparkles, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TemplateGalleryTrigger } from "./TemplateGallery";
 
 export function WelcomeState() {
   return (
@@ -27,9 +28,17 @@ export function WelcomeState() {
 
         {/* Text */}
         <h2 className="text-xl font-semibold mb-2">Start Building</h2>
-        <p className="text-muted-foreground text-sm max-w-[200px] mb-4">
-          Drag a node from below to begin creating your workflow
+        <p className="text-muted-foreground text-sm max-w-[240px] mb-4">
+          Pick something that already works, or drag a step from below.
         </p>
+
+        {/* The container disables pointer events so the canvas stays draggable
+            through the overlay — re-enable them for the button itself. */}
+        <div className="pointer-events-auto mb-4">
+          <TemplateGalleryTrigger />
+        </div>
+
+        <p className="text-xs text-muted-foreground mb-2">or build your own</p>
 
         {/* Arrow pointing down */}
         <div className="animate-bounce">

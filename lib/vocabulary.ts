@@ -21,6 +21,11 @@ export const FIELD_TYPES: Term[] = [
   { value: "number", label: "Number", help: "A numeric value" },
   { value: "boolean", label: "Yes / No", help: "A simple on or off choice" },
   { value: "json", label: "Group of fields", help: "Several related values together" },
+  {
+    value: "file",
+    label: "A file",
+    help: "The person uploads a document and we read the text out of it",
+  },
 ];
 
 /** Types an AI output schema property can have. Adds list/group. */

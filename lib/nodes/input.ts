@@ -50,6 +50,9 @@ export class InputNodeHandler implements NodeHandler {
         return false;
       case "json":
         return {};
+      case "file":
+        // The browser reads the file and sends its text, so this behaves as text.
+        return "";
       default:
         return "";
     }
@@ -73,6 +76,8 @@ export class InputNodeHandler implements NodeHandler {
         if (value === "true") return { value: true };
         if (value === "false") return { value: false };
         return { error: "Cannot convert to boolean" };
+      case "file":
+        return { value: String(value) };
       case "json":
         if (typeof value === "object") return { value };
         try {

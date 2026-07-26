@@ -21,7 +21,7 @@ export interface NodeHandler {
 
 export interface InputField {
   name: string;
-  type: "string" | "number" | "boolean" | "json";
+  type: "string" | "number" | "boolean" | "json" | "file";
   required?: boolean;
   default?: unknown;
   /** Shown to whoever runs the workflow. Falls back to a humanized `name`. */
