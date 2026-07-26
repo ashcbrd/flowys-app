@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { humanizeFieldName } from "@/lib/vocabulary";
 import { ValueEditor } from "./ValueEditor";
+import { FileField } from "./FileField";
 import type { InputField } from "@/lib/nodes/types";
 
 /**
@@ -55,6 +56,9 @@ export function initialRunValues(fields: InputField[]): RunValues {
         break;
       case "json":
         values[field.name] = {};
+        break;
+      case "file":
+        values[field.name] = "";
         break;
       default:
         values[field.name] = "";
@@ -179,6 +183,14 @@ export function RunForm({
                   kind="group"
                 />
               </div>
+            )}
+
+            {field.type === "file" && (
+              <FileField
+                id={id}
+                value={value === undefined || value === null ? "" : String(value)}
+                onChange={(text) => set(field.name, text)}
+              />
             )}
 
             {(field.type === "string" || !field.type) && (
