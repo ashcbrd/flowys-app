@@ -26,6 +26,19 @@ export interface PresetSecret {
   format?: string;
 }
 
+/**
+ * A non-secret value the request also needs — a database id, a table name, a
+ * from-address. Collected in the same dialog so the user never has to hunt for a
+ * placeholder buried in a request body.
+ */
+export interface PresetField {
+  /** Placeholder token in the preset config, e.g. YOUR_DATABASE_ID. */
+  token: string;
+  label: string
+  help: string;
+  placeholder: string;
+}
+
 export interface ApiPreset {
   id: string;
   name: string;
@@ -35,6 +48,8 @@ export interface ApiPreset {
   /** Where the user finds the secret they need. */
   whereToGetIt: string;
   secret: PresetSecret;
+  /** Additional non-secret values this request needs. */
+  extraFields?: PresetField[];
   config: {
     url: string;
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -99,11 +114,25 @@ export const API_PRESETS: ApiPreset[] = [
       help: "It starts with re_",
       placeholder: "re_xxxxxxxx",
     },
+    extraFields: [
+      {
+        token: "YOUR_FROM_ADDRESS",
+        label: "Send from",
+        help: "Must be an address on a domain you've verified with Resend.",
+        placeholder: "you@yourdomain.com",
+      },
+      {
+        token: "YOUR_TO_ADDRESS",
+        label: "Send to",
+        help: "Where the email should go.",
+        placeholder: "them@example.com",
+      },
+    ],
     config: {
       url: "https://api.resend.com/emails",
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: '{"from": "you@yourdomain.com", "to": "them@example.com", "subject": "From my workflow", "text": "{{result}}"}',
+      body: '{"from": "YOUR_FROM_ADDRESS", "to": "YOUR_TO_ADDRESS", "subject": "From my workflow", "text": "{{result}}"}',
     },
   },
   {
@@ -121,6 +150,14 @@ export const API_PRESETS: ApiPreset[] = [
       help: "It starts with ntn_ or secret_",
       placeholder: "ntn_xxxxxxxx",
     },
+    extraFields: [
+      {
+        token: "YOUR_DATABASE_ID",
+        label: "Which database?",
+        help: "Open the database in Notion — the id is the long code in the address bar, before the ?.",
+        placeholder: "a1b2c3d4e5f6...",
+      },
+    ],
     config: {
       url: "https://api.notion.com/v1/pages",
       method: "POST",
@@ -146,6 +183,20 @@ export const API_PRESETS: ApiPreset[] = [
       help: "It starts with pat",
       placeholder: "patXXXXXXXX",
     },
+    extraFields: [
+      {
+        token: "YOUR_BASE_ID",
+        label: "Which base?",
+        help: "Open your base — the id starts with app and is in the address bar.",
+        placeholder: "appXXXXXXXX",
+      },
+      {
+        token: "YOUR_TABLE_NAME",
+        label: "Which table?",
+        help: "The table name exactly as it appears in Airtable.",
+        placeholder: "Feedback",
+      },
+    ],
     config: {
       url: "https://api.airtable.com/v0/YOUR_BASE_ID/YOUR_TABLE_NAME",
       method: "POST",
@@ -212,10 +263,11 @@ export const API_PRESETS: ApiPreset[] = [
   },
 ];
 
-/** Build an API-node config from a preset plus the user's one secret. */
+/** Build an API-node config from a preset, the user's secret, and any extras. */
 export function applyPreset(
   preset: ApiPreset,
-  value: string
+  value: string,
+  extras: Record<string, string> = {}
 ): Record<string, unknown> {
   const config: Record<string, unknown> = {
     url: preset.config.url,
@@ -250,6 +302,21 @@ export function applyPreset(
         config.body = config.body.replace("{{secret}}", formatted);
       }
       break;
+  }
+
+  // Replace placeholder tokens with what the user supplied, in the url and the
+  // body alike. An unanswered token is left in place so it stays visible in the
+  // step's settings rather than silently becoming an empty string.
+  for (const field of preset.extraFields || []) {
+    const supplied = extras[field.token]?.trim();
+    if (!supplied) continue;
+
+    if (typeof config.url === "string") {
+      config.url = config.url.split(field.token).join(supplied);
+    }
+    if (typeof config.body === "string") {
+      config.body = config.body.split(field.token).join(supplied);
+    }
   }
 
   return config;

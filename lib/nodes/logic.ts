@@ -282,6 +282,17 @@ export class LogicNodeHandler implements NodeHandler {
     return { success: true, output: { data: sliced, count: sliced.length } };
   }
 
+  /** Turn an unquoted literal into the type it represents. */
+  private coerceLiteral(raw: string): unknown {
+    const trimmed = raw.trim();
+    if (trimmed === "") return trimmed;
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    if (trimmed === "null") return null;
+    if (!Number.isNaN(Number(trimmed))) return Number(trimmed);
+    return trimmed;
+  }
+
   private evaluateCondition(condition: string, context: Record<string, unknown>): boolean {
     const operators: Record<string, (a: unknown, b: unknown) => boolean> = {
       "==": (a, b) => a == b,
@@ -310,9 +321,13 @@ export class LogicNodeHandler implements NodeHandler {
 
     const [, leftPath, operator, rightValue] = match;
     const leftVal = this.getNestedValue(context, leftPath);
+    // An unquoted right-hand side is a field path first, then a literal. Literals
+    // must be coerced to their real type: left as strings, `===` and `!==` compare
+    // a number against a string and are always false, which made every strict
+    // numeric or boolean comparison silently wrong.
     const rightVal = rightValue.startsWith("'") || rightValue.startsWith('"')
       ? rightValue.slice(1, -1)
-      : this.getNestedValue(context, rightValue) ?? rightValue;
+      : this.getNestedValue(context, rightValue) ?? this.coerceLiteral(rightValue);
 
     const op = operators[operator];
     return op ? op(leftVal, rightVal) : false;

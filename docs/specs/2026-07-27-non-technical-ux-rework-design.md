@@ -182,15 +182,45 @@ where `label` is absent the UI falls back to a humanized `name`.
 
 ## Verification
 
-The repo has no test framework — `package.json` declares no test runner, and
-adding one is out of scope for this change. Verification is therefore:
+Four checks, all currently green:
 
-1. `npx tsc --noEmit` — clean
-2. `npm run build` — production build succeeds
-3. Manual pass: run a workflow with no input node (expect no dialog), one with
-   declared fields (expect a form), a scheduled run, and each of the three
-   reworked node config sites.
+1. `npx tsc --noEmit`
+2. `npm test` — 130 tests across 6 suites
+3. `npm run build` — production build (needs env vars set; see `.env.example`)
+4. `npm run lint`
 
-The absence of automated tests around the templating grammar is a known gap and
-the most valuable place to add tests later, since `lib/utils/template.ts` now has
-four call sites depending on identical behavior.
+Test coverage focuses on the logic where a silent error would be expensive:
+
+| Suite | Covers |
+| --- | --- |
+| `tests/template.test.ts` | The `{{variable}}` grammar, including the deliberate keep-vs-empty difference between call sites |
+| `tests/conditions.test.ts` | Every condition-builder operator, evaluated through the real Logic node |
+| `tests/templates.test.ts` | All shipped templates driven through the real executor, with only the model call stubbed |
+| `tests/models.test.ts` | Model catalog integrity and retired-ID resolution |
+| `tests/presets.test.ts` | Where each preset places the user's secret, and placeholder substitution |
+| `tests/run-form.test.ts` | Field derivation, initial values, and required-field validation |
+
+**Not covered:** no browser-level test. The reworked panels are verified by
+compilation and by the logic tests behind them, not by driving a real page.
+Adding a browser harness is the largest remaining gap.
+
+## Status
+
+Delivered beyond the original scope of this spec, in later commits:
+
+- App connections gated behind `lib/features.ts` and shown as "Coming soon",
+  including a guardrail in the AI assistant. Backend left intact.
+- Model catalog (`lib/providers/models.ts`) replacing a free-text model field.
+  The previous Anthropic default had retired six weeks before it was found.
+- Error diagnosis rewritten as an ordered rule table in the executor.
+- Templates, API presets, and file input — value that does not depend on app
+  connections.
+
+Bugs found and fixed while testing, each of which had been silently wrong:
+
+- Condition operator alternation matched `==` inside `===`, stranding the
+  right-hand side.
+- Condition right-hand values were never coerced from strings, so `===` and
+  `!==` compared a number against a string and were always false.
+- `interpolateVariables` had diverged across its four copies.
+- `exists` treated an empty string as present.

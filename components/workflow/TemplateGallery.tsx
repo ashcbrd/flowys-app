@@ -86,7 +86,7 @@ export function TemplateGallery({ open, onOpenChange }: TemplateGalleryProps) {
                           {template.description}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1.5">
-                          You'll need: {template.needs}
+                          You&apos;ll need: {template.needs}
                         </p>
                       </div>
 
