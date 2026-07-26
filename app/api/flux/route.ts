@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
+import { INTEGRATIONS_ENABLED } from "@/lib/features";
+import { isKnownModel, resolveModel, DEFAULT_MODEL, type ProviderId } from "@/lib/providers/models";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -45,6 +47,14 @@ NODE TYPES (use exactly these type values):
 - "input" - Accepts workflow input. Config: { fields: [{ name: string, type: "string"|"number"|"boolean"|"json", required?: boolean, default?: any }] }
 - "api" - HTTP requests. Config: { url: string, method: "GET"|"POST"|"PUT"|"DELETE", headers?: object, body?: string, responseMapping?: object }
 - "ai" - LLM prompts. Config: { provider: "openai"|"anthropic", model: string, systemPrompt?: string, userPromptTemplate: string, temperature?: number, maxTokens?: number, outputSchema: { type: "object", properties: object, required: string[] } }
+
+MODEL IDS - USE ONLY THESE EXACT STRINGS:
+Never invent a model ID and never add a date suffix. Any other value fails at run
+time with a 404 and the workflow you generated will not work.
+  provider "anthropic" -> "claude-opus-5" (default), "claude-sonnet-5", "claude-haiku-4-5"
+  provider "openai"    -> "gpt-4o" (default), "gpt-4o-mini"
+Default to provider "anthropic" with model "claude-opus-5" unless the user asks
+for something else. The model must match its provider.
 - "logic" - Data operations. Config: { operation: "filter"|"map"|"reduce"|"condition"|"transform", condition?: string, expression?: string, mappings?: object }
 - "output" - Final result. Config: { format: "json"|"text"|"markdown", template?: string, fields?: string[] }
 
@@ -83,6 +93,20 @@ RESPONSE FORMAT (ALWAYS VALID JSON):
   "suggestions": ["Follow-up 1", "Follow-up 2"]
 }
 
+${INTEGRATIONS_ENABLED ? "" : `APP CONNECTIONS ARE NOT AVAILABLE YET:
+Connecting Flowys directly to other apps - Slack, Notion, GitHub, Airtable, Google
+Sheets, SendGrid, Twilio, Discord, Gmail, Trello, Jira, or any other named product -
+is still being built. There is no "integration" node available.
+
+When someone asks for a workflow that sends to, reads from, or syncs with a named
+app, you MUST:
+1. Say plainly that connecting to that app is coming soon, in one short sentence.
+2. NOT include "workflowGeneration" in your response for that app step.
+3. Offer what does work instead: if the app has a public web address you can call,
+   an "api" node can reach it with the person's own key; otherwise suggest building
+   the rest of the workflow now and adding the app step once it is ready.
+Never imply the connection already works, and never invent an integration node.
+`}
 IMPORTANT:
 - Only include "workflowGeneration" when user asks to CREATE/BUILD/MAKE a workflow
 - Only include "errorAnalysis" when there's an actual error
@@ -90,6 +114,41 @@ IMPORTANT:
 - For outputSchema in AI nodes, always include type:"object", properties with descriptions, and required array
 
 Always respond with ONLY valid JSON.`;
+
+/**
+ * Repair AI-step model IDs on a generated workflow.
+ *
+ * The prompt pins the allowed IDs, but a hallucinated or retired one would put a
+ * step on the user's canvas that fails with a 404 the moment they press Run —
+ * which reads as "the app is broken", not "one setting is wrong".
+ */
+function normalizeAiModels(nodes: unknown[]): unknown[] {
+  return nodes.map((node) => {
+    const n = node as {
+      type?: string;
+      data?: { config?: Record<string, unknown> };
+    };
+
+    if (n?.type !== "ai" || !n.data?.config) return node;
+
+    const config = n.data.config;
+    const provider: ProviderId =
+      config.provider === "openai" ? "openai" : "anthropic";
+    const requested = config.model as string | undefined;
+
+    // Map a retired ID to its replacement; fall back to the provider default for
+    // anything we don't recognise at all.
+    const resolved = resolveModel(requested, provider);
+    const model = isKnownModel(resolved) ? resolved : DEFAULT_MODEL[provider];
+
+    if (model === requested && config.provider === provider) return node;
+
+    return {
+      ...n,
+      data: { ...n.data, config: { ...config, provider, model } },
+    };
+  });
+}
 
 export async function GET() {
   return NextResponse.json({
@@ -210,12 +269,35 @@ export async function POST(request: NextRequest) {
         parsedContent.workflowGeneration.nodes &&
         parsedContent.workflowGeneration.nodes.length > 0
       ) {
-        result.workflowGeneration = {
-          description:
-            parsedContent.workflowGeneration.description || "Generated workflow",
-          nodes: parsedContent.workflowGeneration.nodes,
-          edges: parsedContent.workflowGeneration.edges || [],
-        };
+        const generatedNodes = parsedContent.workflowGeneration.nodes as {
+          type?: string;
+        }[];
+
+        // Backstop for the prompt guardrail: an integration node can't be
+        // configured or run yet, so handing one back would put a dead step on the
+        // user's canvas. Drop the whole suggestion and say why instead.
+        const usesIntegrations =
+          !INTEGRATIONS_ENABLED &&
+          generatedNodes.some((node) => node?.type === "integration");
+
+        if (usesIntegrations) {
+          result.message =
+            "Connecting Flowys straight to other apps is coming soon, so I can't build that part yet. " +
+            "If the app has a web address I can call, an API step can reach it in the meantime — " +
+            "or I can build the rest of the workflow now and you can add the app step later.";
+          result.suggestions = [
+            "Build the rest without the app step",
+            "Use an API step instead",
+            "What can I build today?",
+          ];
+        } else {
+          result.workflowGeneration = {
+            description:
+              parsedContent.workflowGeneration.description || "Generated workflow",
+            nodes: normalizeAiModels(generatedNodes),
+            edges: parsedContent.workflowGeneration.edges || [],
+          };
+        }
       }
 
       if (parsedContent.errorAnalysis && parsedContent.errorAnalysis.hasError) {
