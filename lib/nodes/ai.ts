@@ -1,5 +1,6 @@
 import type { NodeHandler, NodeContext, NodeResult, AiNodeConfig } from "./types";
 import { executePrompt, type PromptMessage, type OutputSchema } from "@/lib/providers";
+import { interpolateVariables } from "@/lib/utils/template";
 
 export class AiNodeHandler implements NodeHandler {
   type = "ai" as const;
@@ -8,7 +9,7 @@ export class AiNodeHandler implements NodeHandler {
     const config = context.config as unknown as AiNodeConfig;
 
     try {
-      const userPrompt = this.interpolateVariables(config.userPromptTemplate, {
+      const userPrompt = interpolateVariables(config.userPromptTemplate, {
         ...context.inputs,
         ...context.globalContext,
       });
@@ -62,28 +63,6 @@ CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
         error: `AI execution error: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-  }
-
-  private interpolateVariables(template: string, inputs: Record<string, unknown>): string {
-    return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_, path) => {
-      const value = this.getNestedValue(inputs, path);
-      if (value === undefined) return `{{${path}}}`;
-      if (typeof value === "object") return JSON.stringify(value);
-      return String(value);
-    });
-  }
-
-  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    const keys = path.split(".");
-    let current: unknown = obj;
-
-    for (const key of keys) {
-      if (current === null || current === undefined) return undefined;
-      if (typeof current !== "object") return undefined;
-      current = (current as Record<string, unknown>)[key];
-    }
-
-    return current;
   }
 
   private sanitizePrompt(prompt: string): string {

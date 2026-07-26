@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { NodeConfigPanel } from "@/components/panels/NodeConfigPanel";
+import { ValueEditor } from "@/components/inputs/ValueEditor";
 import { useWorkflowStore } from "@/store/workflow";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,7 @@ export function ConfigDrawer() {
   const { selectedNode, lastExecution, executionLogs, nodes } = useWorkflowStore();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("setup");
-  const [testInput, setTestInput] = useState("{}");
+  const [testInput, setTestInput] = useState<Record<string, unknown>>({});
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
@@ -34,7 +35,7 @@ export function ConfigDrawer() {
 
   // Reset test state when node changes
   useEffect(() => {
-    setTestInput("{}");
+    setTestInput({});
     setTestResult(null);
   }, [selectedNode?.id]);
 
@@ -51,17 +52,7 @@ export function ConfigDrawer() {
     setTestResult(null);
 
     try {
-      let input: Record<string, unknown> = {};
-      try {
-        input = JSON.parse(testInput);
-      } catch {
-        setTestResult({
-          success: false,
-          error: "Invalid JSON input",
-        });
-        setIsTesting(false);
-        return;
-      }
+      const input = testInput;
 
       // Get the current node config from the store (in case it was modified)
       const currentNode = nodes.find((n) => n.id === selectedNode.id);
@@ -201,16 +192,19 @@ export function ConfigDrawer() {
           <TabsContent value="test" className="flex-1 overflow-auto m-0 p-4">
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium">Test Input (JSON)</Label>
-                <Textarea
-                  value={testInput}
-                  onChange={(e) => setTestInput(e.target.value)}
-                  placeholder='{"text": "Hello, world!"}'
-                  className="mt-1.5 font-mono text-sm h-24"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Provide sample data to test this node in isolation
+                <Label className="text-sm font-medium">Sample details</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  Try this step on its own. Add any values it needs.
                 </p>
+                <div className="rounded-md border p-3">
+                  <ValueEditor
+                    value={testInput}
+                    onChange={(next) =>
+                      setTestInput((next ?? {}) as Record<string, unknown>)
+                    }
+                    kind="group"
+                  />
+                </div>
               </div>
 
               <Button
