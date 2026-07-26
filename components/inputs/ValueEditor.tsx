@@ -236,20 +236,10 @@ function GroupEditor({
   renderTextInput,
   depth,
 }: GroupEditorProps) {
-  // Preserve key order across edits by tracking it locally; renaming a key in an
-  // object literal would otherwise move it to the end on every keystroke.
-  const [order, setOrder] = React.useState<string[]>(() => Object.keys(value));
-
-  React.useEffect(() => {
-    const keys = Object.keys(value);
-    setOrder((prev) => {
-      const kept = prev.filter((k) => keys.includes(k));
-      const added = keys.filter((k) => !kept.includes(k));
-      return [...kept, ...added];
-    });
-  }, [value]);
-
-  const entries = order.filter((k) => k in value);
+  // Key order comes straight from the object. Renaming rebuilds it in the same
+  // sequence below, and JS preserves string-key insertion order, so a rename
+  // keeps its position without any local tracking to keep in sync.
+  const entries = Object.keys(value);
 
   const setKey = (oldKey: string, newKey: string) => {
     if (newKey === oldKey) return;
@@ -257,11 +247,11 @@ function GroupEditor({
       return; // refuse duplicates rather than silently overwriting
     }
 
+    // Rebuilding in `entries` order is what keeps the renamed key in place.
     const next: Record<string, unknown> = {};
     for (const k of entries) {
       next[k === oldKey ? newKey : k] = value[k];
     }
-    setOrder((prev) => prev.map((k) => (k === oldKey ? newKey : k)));
     onChange(next);
   };
 
@@ -272,14 +262,11 @@ function GroupEditor({
   const remove = (key: string) => {
     const next = { ...value };
     delete next[key];
-    setOrder((prev) => prev.filter((k) => k !== key));
     onChange(next);
   };
 
   const add = () => {
-    const key = uniqueKey(entries);
-    setOrder((prev) => [...prev, key]);
-    onChange({ ...value, [key]: "" });
+    onChange({ ...value, [uniqueKey(entries)]: "" });
   };
 
   if (depth >= MAX_DEPTH) {
