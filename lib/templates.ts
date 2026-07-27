@@ -122,6 +122,72 @@ function result(id: string, label: string, col: number, row: number, template: s
   };
 }
 
+/**
+ * Reads from a service on the web.
+ *
+ * Templates only ever point at services that are free and need no key, so a
+ * template works the moment it lands on the canvas. A template that asked for an
+ * account first would not be a starting point.
+ */
+function fetchFrom(
+  id: string,
+  label: string,
+  col: number,
+  row: number,
+  opts: { url: string; gives?: Record<string, string> }
+) {
+  return {
+    id,
+    type: "api" as const,
+    position: at(col, row),
+    data: {
+      label,
+      config: {
+        url: opts.url,
+        method: "GET",
+        // Some services reject a request with no caller name.
+        headers: { "User-Agent": "Flowys" },
+        // Omit for a list response: the step already hands on `data` and `count`.
+        ...(opts.gives ? { responseMapping: opts.gives } : {}),
+      },
+    },
+  };
+}
+
+/**
+ * Sends the finished result somewhere.
+ *
+ * Points at a public echo service so the step works out of the box and you can
+ * see it succeed. Swap the address for your own — a webhook.site link shows each
+ * delivery in a browser — and it keeps working.
+ *
+ * `continueOnError` matters: if the receiver is down, that should not throw away
+ * a result the earlier steps already produced.
+ */
+function sendTo(
+  id: string,
+  label: string,
+  col: number,
+  row: number,
+  payload: Record<string, unknown>
+) {
+  return {
+    id,
+    type: "webhook" as const,
+    position: at(col, row),
+    data: {
+      label,
+      config: {
+        url: "https://postman-echo.com/post",
+        method: "POST",
+        payloadTemplate: payload,
+        continueOnError: true,
+        timeout: 15000,
+      },
+    },
+  };
+}
+
 /** `wire("a>b", "b>c")` — keeps a wide graph's edges legible. */
 function wire(...pairs: string[]) {
   return pairs.map((pair, i) => {
@@ -136,7 +202,7 @@ const SUPPORT_TRIAGE: WorkflowTemplate = {
   id: "support-triage",
   name: "Triage a support email, end to end",
   description:
-    "13 steps. Reads one support email and returns a clean ticket, an urgency call, likely causes, a draft reply, and a note for whoever picks it up.",
+    "14 steps. Reads one support email and returns a clean ticket, an urgency call, likely causes, a draft reply, and a note for whoever picks it up.",
   category: "Support",
   needs: "The email text, and who sent it",
   workflow: {
@@ -283,6 +349,11 @@ const SUPPORT_TRIAGE: WorkflowTemplate = {
           "{{replyDraft}}",
         ].join("\n")
       ),
+      sendTo("n14", "Send it on", 6, 2, {
+        source: "flowys",
+        workflow: "Support triage",
+        result: "{{result}}",
+      }),
     ],
     edges: wire(
       "n1>n2",
@@ -302,7 +373,8 @@ const SUPPORT_TRIAGE: WorkflowTemplate = {
       "n9>n13",
       "n10>n13",
       "n11>n13",
-      "n12>n13"
+      "n12>n13",
+      "n13>n14"
     ),
   },
 };
@@ -313,7 +385,7 @@ const LEAD_QUALIFY: WorkflowTemplate = {
   id: "lead-qualify",
   name: "Qualify an enquiry and draft both replies",
   description:
-    "13 steps. Scores an enquiry against who you want to work with, flags the risks, and drafts the reply for either answer so you just pick one.",
+    "14 steps. Scores an enquiry against who you want to work with, flags the risks, and drafts the reply for either answer so you just pick one.",
   category: "Sales",
   needs: "The enquiry, and a line on your ideal customer",
   workflow: {
@@ -469,6 +541,11 @@ const LEAD_QUALIFY: WorkflowTemplate = {
           "{{passReply}}",
         ].join("\n")
       ),
+      sendTo("n14", "Send it on", 6, 2, {
+        source: "flowys",
+        workflow: "Enquiry verdict",
+        result: "{{result}}",
+      }),
     ],
     edges: wire(
       "n1>n2",
@@ -489,7 +566,8 @@ const LEAD_QUALIFY: WorkflowTemplate = {
       "n9>n13",
       "n10>n13",
       "n11>n13",
-      "n12>n13"
+      "n12>n13",
+      "n13>n14"
     ),
   },
 };
@@ -500,7 +578,7 @@ const MEETING_NOTES: WorkflowTemplate = {
   id: "meeting-actions",
   name: "Turn a meeting recording into decisions and actions",
   description:
-    "14 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks — then drafts the follow-up message.",
+    "15 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks — then drafts the follow-up message.",
   category: "Meetings",
   needs: "A transcript file — a .txt export from your recorder works",
   workflow: {
@@ -652,6 +730,11 @@ const MEETING_NOTES: WorkflowTemplate = {
           "{{followUpMessage}}",
         ].join("\n")
       ),
+      sendTo("n15", "Send it on", 5, 2, {
+        source: "flowys",
+        workflow: "Meeting write-up",
+        result: "{{result}}",
+      }),
     ],
     edges: wire(
       "n1>n2",
@@ -675,7 +758,8 @@ const MEETING_NOTES: WorkflowTemplate = {
       "n10>n14",
       "n11>n14",
       "n12>n14",
-      "n13>n14"
+      "n13>n14",
+      "n14>n15"
     ),
   },
 };
@@ -686,7 +770,7 @@ const REVIEW_THEMES: WorkflowTemplate = {
   id: "review-themes",
   name: "Turn a pile of reviews into a decision",
   description:
-    "10 steps. Reads a batch of reviews, finds the themes and the quiet signals, works out what's costing you customers, and says what to fix first.",
+    "11 steps. Reads a batch of reviews, finds the themes and the quiet signals, works out what's costing you customers, and says what to fix first.",
   category: "Customer feedback",
   needs: "A file of reviews — a CSV export works well",
   workflow: {
@@ -834,6 +918,11 @@ const REVIEW_THEMES: WorkflowTemplate = {
           "{{teamUpdate}}",
         ].join("\n")
       ),
+      sendTo("n11", "Send it on", 5, 1, {
+        source: "flowys",
+        workflow: "Review read-out",
+        result: "{{result}}",
+      }),
     ],
     edges: wire(
       "n1>n2",
@@ -849,7 +938,332 @@ const REVIEW_THEMES: WorkflowTemplate = {
       "n5>n10",
       "n7>n10",
       "n8>n10",
-      "n9>n10"
+      "n9>n10",
+      "n10>n11"
+    ),
+  },
+};
+
+// ---------------------------------------------------------------------------
+
+const GITHUB_BRIEF: WorkflowTemplate = {
+  id: "github-brief",
+  name: "Brief me on a GitHub project",
+  description:
+    "13 steps. Looks up any public project, reads its open issues, and tells you what it does, how healthy it looks, and whether it is worth adopting.",
+  category: "Research",
+  needs: "The owner and name of a public GitHub project",
+  workflow: {
+    nodes: [
+      ask("n1", "Which project?", 0, 1, [
+        {
+          name: "owner",
+          type: "string",
+          required: true,
+          label: "Owner",
+          description: "The user or organisation, as it appears in the address.",
+          placeholder: "facebook",
+        },
+        {
+          name: "repo",
+          type: "string",
+          required: true,
+          label: "Project name",
+          placeholder: "react",
+        },
+      ]),
+
+      fetchFrom("n2", "Look up the project", 1, 0, {
+        url: "https://api.github.com/repos/{{owner}}/{{repo}}",
+        gives: {
+          projectName: "full_name",
+          blurb: "description",
+          stars: "stargazers_count",
+          forks: "forks_count",
+          openIssues: "open_issues_count",
+          language: "language",
+          link: "html_url",
+          lastPush: "pushed_at",
+        },
+      }),
+
+      fetchFrom("n3", "Read the open issues", 1, 2, {
+        url: "https://api.github.com/repos/{{owner}}/{{repo}}/issues?state=open&per_page=15",
+      }),
+
+      think("n4", "Explain what it is", 2, 0, {
+        system:
+          "You explain software projects to someone deciding whether to use one. Plain language, no jargon. Say when the description does not tell you enough.",
+        prompt:
+          "Project: {{projectName}}\nDescription: {{blurb}}\nWritten in: {{language}}\nStars: {{stars}}\n\nExplain what this is and who it is for.",
+        gives: {
+          summary: { type: "string", description: "Two sentences on what it does" },
+          audience: { type: "string", description: "Who would get value from it" },
+        },
+      }),
+
+      rule("n5", "Lots of open issues?", 2, 1, "openIssues > 200"),
+
+      rename("n6", "Note the health", 3, 1, {
+        manyOpenIssues: "branch",
+        issueTally: "data.openIssues",
+        starTally: "data.stars",
+        forkTally: "data.forks",
+        projectLink: "data.link",
+        lastUpdated: "data.lastPush",
+      }),
+
+      {
+        id: "n7",
+        type: "logic" as const,
+        position: at(2, 2),
+        data: {
+          label: "Just the issue titles",
+          config: {
+            operation: "map",
+            mappings: { heading: "item.title", chatter: "item.comments" },
+          },
+        },
+      },
+
+      {
+        id: "n8",
+        type: "logic" as const,
+        position: at(3, 3),
+        data: {
+          label: "Add up the comments",
+          config: { operation: "reduce", expression: "sum:chatter" },
+        },
+      },
+
+      rename("n9", "Note the chatter", 4, 3, { totalComments: "result" }),
+
+      think("n10", "Find the themes", 3, 2, {
+        system:
+          "You read a list of open issue titles and report what people are actually struggling with. Ground every theme in the titles given.",
+        prompt:
+          "Open issues:\n\n{{data}}\n\nWhat are the recurring themes?",
+        gives: {
+          themes: { type: "array", description: "Recurring themes, most common first" },
+          worstProblem: { type: "string", description: "The single most concerning one" },
+        },
+      }),
+
+      think("n11", "Say whether to adopt it", 4, 1, {
+        system:
+          "You advise on whether to adopt a project. Weigh activity and popularity against unresolved problems. Be decisive and say what would change your mind.",
+        prompt:
+          "What it is: {{summary}}\nFor: {{audience}}\n\nStars: {{starTally}} · forks: {{forkTally}} · open issues: {{issueTally}} · many open issues: {{manyOpenIssues}}\nLast updated: {{lastUpdated}}\n\nWould you adopt this?",
+        gives: {
+          verdict: { type: "string", description: "One of: yes, probably, be careful, no" },
+          reasoning: { type: "string", description: "Two sentences on why" },
+          watchFor: { type: "string", description: "The one thing to keep an eye on" },
+        },
+      }),
+
+      result(
+        "n12",
+        "The brief",
+        5,
+        1,
+        [
+          "# {{verdict}}",
+          "",
+          "{{reasoning}}",
+          "",
+          "**Watch for:** {{watchFor}}",
+          "",
+          "## What it is",
+          "{{summary}}",
+          "",
+          "Built for {{audience}}.",
+          "",
+          "## Health",
+          "",
+          "| | |",
+          "| --- | --- |",
+          "| Stars | {{starTally}} |",
+          "| Forks | {{forkTally}} |",
+          "| Open issues | {{issueTally}} |",
+          "| Unusually busy | {{manyOpenIssues}} |",
+          "| Comments on open issues | {{totalComments}} |",
+          "| Last updated | {{lastUpdated}} |",
+          "",
+          "## What people are struggling with",
+          "{{themes}}",
+          "",
+          "Biggest concern: {{worstProblem}}",
+          "",
+          "[View the project]({{projectLink}})",
+        ].join("\n")
+      ),
+
+      sendTo("n13", "Send the brief on", 6, 1, {
+        source: "flowys",
+        workflow: "GitHub project brief",
+        brief: "{{result}}",
+      }),
+    ],
+    edges: wire(
+      "n1>n2",
+      "n1>n3",
+      "n2>n4",
+      "n2>n5",
+      "n5>n6",
+      "n3>n7",
+      "n7>n8",
+      "n8>n9",
+      "n7>n10",
+      "n4>n11",
+      "n6>n11",
+      "n4>n12",
+      "n6>n12",
+      "n9>n12",
+      "n10>n12",
+      "n11>n12",
+      "n12>n13"
+    ),
+  },
+};
+
+// ---------------------------------------------------------------------------
+
+const TOPIC_PULSE: WorkflowTemplate = {
+  id: "topic-pulse",
+  name: "See what people are saying about a topic",
+  description:
+    "12 steps. Searches Hacker News for any subject, reads the discussion, and reports the mood, the themes and the strongest opinions.",
+  category: "Research",
+  needs: "A subject to look up",
+  workflow: {
+    nodes: [
+      ask("n1", "What subject?", 0, 1, [
+        {
+          name: "topic",
+          type: "string",
+          required: true,
+          label: "Subject",
+          placeholder: "workflow automation",
+        },
+      ]),
+
+      fetchFrom("n2", "Search the discussion", 1, 1, {
+        url: "https://hn.algolia.com/api/v1/search?query={{topic}}&tags=story&hitsPerPage=20",
+        gives: { data: "hits", totalFound: "nbHits" },
+      }),
+
+      rule("n3", "Much being said?", 2, 0, "totalFound > 100"),
+
+      rename("n4", "Note how much", 3, 0, {
+        widelyDiscussed: "branch",
+        mentionCount: "data.totalFound",
+      }),
+
+      {
+        id: "n5",
+        type: "logic" as const,
+        position: at(2, 1),
+        data: {
+          label: "Take the top ten",
+          config: { operation: "slice", expression: "0:10" },
+        },
+      },
+
+      {
+        id: "n6",
+        type: "logic" as const,
+        position: at(3, 1),
+        data: {
+          label: "Just what we need",
+          config: {
+            operation: "map",
+            mappings: {
+              heading: "item.title",
+              score: "item.points",
+              replies: "item.num_comments",
+            },
+          },
+        },
+      },
+
+      {
+        id: "n7",
+        type: "logic" as const,
+        position: at(4, 0),
+        data: {
+          label: "Add up the interest",
+          config: { operation: "reduce", expression: "sum:score" },
+        },
+      },
+
+      rename("n8", "Note the interest", 5, 0, { totalPoints: "result" }),
+
+      think("n9", "Summarise the discussion", 4, 1, {
+        system:
+          "You summarise what a community is discussing, from a list of post titles with their scores and reply counts. Ground everything in the titles given.",
+        prompt:
+          "Posts about the subject:\n\n{{data}}\n\nWhat is the discussion actually about?",
+        gives: {
+          summary: { type: "string", description: "Three sentences at most" },
+          themes: { type: "array", description: "The recurring themes" },
+        },
+      }),
+
+      think("n10", "Read the mood", 4, 2, {
+        system:
+          "You judge the mood of a discussion from post titles and how much attention each got. Say when the titles do not tell you enough.",
+        prompt:
+          "Posts:\n\n{{data}}\n\nWhat is the mood, and what are the strongest opinions?",
+        gives: {
+          mood: {
+            type: "string",
+            description: "One of: enthusiastic, mixed, sceptical, critical",
+          },
+          strongOpinions: { type: "array", description: "The strongest views on show" },
+        },
+      }),
+
+      result(
+        "n11",
+        "The read-out",
+        6,
+        1,
+        [
+          "# What people are saying",
+          "",
+          "{{summary}}",
+          "",
+          "Mood: **{{mood}}** · widely discussed: **{{widelyDiscussed}}** · **{{mentionCount}}** mentions · **{{totalPoints}}** points across the top ten",
+          "",
+          "## Themes",
+          "{{themes}}",
+          "",
+          "## Strongest opinions",
+          "{{strongOpinions}}",
+        ].join("\n")
+      ),
+
+      sendTo("n12", "Send the read-out on", 7, 1, {
+        source: "flowys",
+        workflow: "Topic pulse",
+        readout: "{{result}}",
+      }),
+    ],
+    edges: wire(
+      "n1>n2",
+      "n2>n3",
+      "n3>n4",
+      "n2>n5",
+      "n5>n6",
+      "n6>n7",
+      "n7>n8",
+      "n6>n9",
+      "n6>n10",
+      "n4>n11",
+      "n8>n11",
+      "n9>n11",
+      "n10>n11",
+      "n11>n12"
     ),
   },
 };
@@ -859,6 +1273,8 @@ export const TEMPLATES: WorkflowTemplate[] = [
   LEAD_QUALIFY,
   MEETING_NOTES,
   REVIEW_THEMES,
+  GITHUB_BRIEF,
+  TOPIC_PULSE,
 ];
 
 export function templatesByCategory(): [string, WorkflowTemplate[]][] {
