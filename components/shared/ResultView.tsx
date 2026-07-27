@@ -5,6 +5,7 @@ import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { humanizeFieldName } from "@/lib/vocabulary";
+import { Prose, looksLikeMarkdown } from "./Prose";
 
 /**
  * Shows what a step produced, in a form a person can read.
@@ -49,6 +50,12 @@ function PrimitiveValue({ value }: { value: unknown }) {
 
   if (typeof value === "boolean") {
     return <span>{value ? "Yes" : "No"}</span>;
+  }
+
+  // A named value can hold a whole written answer, not just a word. If it was
+  // written as markdown, render it as such wherever it appears.
+  if (typeof value === "string" && looksLikeMarkdown(value)) {
+    return <Prose>{value}</Prose>;
   }
 
   return <span className="whitespace-pre-wrap break-words">{String(value)}</span>;
@@ -166,8 +173,13 @@ export function ResultView({
 
       <div className={cn(copyable && "pr-7")}>
         {prose !== null ? (
-          // The step already produced text for a person to read, show it as-is.
-          <p className="text-sm whitespace-pre-wrap break-words">{prose}</p>
+          // The step produced a written answer. Render its formatting rather
+          // than showing the person the hashes and asterisks.
+          looksLikeMarkdown(prose) ? (
+            <Prose>{prose}</Prose>
+          ) : (
+            <p className="text-sm whitespace-pre-wrap break-words">{prose}</p>
+          )
         ) : (
           <ValueBlock value={value} depth={0} />
         )}

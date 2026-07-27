@@ -575,7 +575,10 @@ export function Header() {
           <DialogHeader>
             <DialogTitle>Before we start</DialogTitle>
           </DialogHeader>
-          <div className="py-2 max-h-[60vh] overflow-y-auto">
+          {/* The scroll container clips at its content edge, so a focused field's
+              ring loses its left and right sides. The negative margin plus equal
+              padding gives the ring room without shifting the fields. */}
+          <div className="-mx-1.5 px-1.5 py-2 max-h-[60vh] overflow-y-auto">
             <p className="text-sm text-muted-foreground mb-4">
               This workflow needs a few details to run.
             </p>

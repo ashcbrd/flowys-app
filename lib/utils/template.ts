@@ -21,6 +21,10 @@ export type MissingBehavior = "keep" | "empty";
  * `json` is required wherever the result is machine-read, a request body, a
  * webhook payload. `list` is for prose a person reads, where a raw JSON array
  * looks like a bug.
+ *
+ * `list` also decides how a yes/no value reads. A condition step hands on the
+ * string "true", which is correct in a request body and wrong in a sentence, so
+ * prose gets "Yes" and "No" instead.
  */
 export type ArrayStyle = "json" | "list";
 
@@ -53,13 +57,29 @@ export function interpolateVariables(
       return onMissing === "empty" ? "" : `{{${path}}}`;
     }
 
-    if (arrayStyle === "list" && Array.isArray(value)) {
-      return renderList(value);
+    if (arrayStyle === "list") {
+      if (Array.isArray(value)) return renderList(value);
+
+      const yesNo = asYesNo(value);
+      if (yesNo !== null) return yesNo;
     }
 
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
   });
+}
+
+/**
+ * "Yes" or "No" for a yes/no value, null for anything else.
+ *
+ * Condition steps hand on the branch they took as the string "true" or "false",
+ * so both the real boolean and the string form are covered.
+ */
+function asYesNo(value: unknown): string | null {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (value === "true") return "Yes";
+  if (value === "false") return "No";
+  return null;
 }
 
 /** Render a list as markdown bullets, one per line. */

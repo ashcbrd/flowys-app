@@ -91,32 +91,38 @@ export function TemplateInput({
       <FieldPicker fields={fields} onSelect={insert} />
 
       {hasTokens && (
-        <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-          <span className="mr-1">Preview:</span>
-          {segments.map((segment, i) =>
-            segment.kind === "text" ? (
-              <span key={i} className="whitespace-pre-wrap">
-                {segment.value}
-              </span>
-            ) : (
-              <span
-                key={i}
-                className={cn(
-                  "inline-flex items-center rounded px-1.5 py-0.5 font-medium",
-                  knownPath(segment.path)
-                    ? "bg-primary/10 text-primary"
-                    : "bg-destructive/10 text-destructive"
-                )}
-                title={
-                  knownPath(segment.path)
-                    ? undefined
-                    : "No earlier step provides this value"
-                }
-              >
-                {humanizeFieldName(segment.path.split(".").pop() || segment.path)}
-              </span>
-            )
-          )}
+        /* The preview has to keep the shape of what was typed, line breaks and
+           all, so it is ordinary flowing text rather than a flex row. A flex row
+           turned every line into its own item and pushed the labels out of the
+           sentence they belong to. */
+        <div className="rounded-lg border bg-muted/30 px-2.5 py-2">
+          <span className="fy-eyebrow mb-1 block">Preview</span>
+          <span className="block whitespace-pre-wrap break-words text-xs leading-6 text-muted-foreground">
+            {segments.map((segment, i) =>
+              segment.kind === "text" ? (
+                <React.Fragment key={i}>{segment.value}</React.Fragment>
+              ) : (
+                <span
+                  key={i}
+                  className={cn(
+                    "mx-0.5 rounded px-1.5 py-0.5 align-middle font-medium",
+                    knownPath(segment.path)
+                      ? "bg-primary/10 text-primary"
+                      : "bg-destructive/10 text-destructive"
+                  )}
+                  title={
+                    knownPath(segment.path)
+                      ? undefined
+                      : "No earlier step provides this value"
+                  }
+                >
+                  {humanizeFieldName(
+                    segment.path.split(".").pop() || segment.path
+                  )}
+                </span>
+              )
+            )}
+          </span>
         </div>
       )}
     </div>
