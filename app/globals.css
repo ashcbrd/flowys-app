@@ -4,48 +4,50 @@
 
 @layer base {
   :root {
+    /* Ported from the landing site so both surfaces read as one product.
+       #0b1120 ink, #0a6cff blue, #f6f8fb mist, #e4e9f0 hairline. */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 223 49% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 223 49% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 223 49% 8%;
+    --primary: 216 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 38% 97%;
+    --secondary-foreground: 223 49% 8%;
+    --muted: 216 38% 97%;
+    --muted-foreground: 217 18% 41%;
+    --accent: 216 38% 96%;
+    --accent-foreground: 223 49% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 28% 92%;
+    --input: 215 28% 92%;
+    --ring: 216 100% 52%;
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 223 49% 8%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 10%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 10%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 216 100% 58%;
+    --primary-foreground: 223 49% 8%;
+    --secondary: 222 40% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 222 40% 15%;
+    --muted-foreground: 217 20% 65%;
+    --accent: 222 40% 17%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 33% 18%;
+    --input: 222 33% 18%;
+    --ring: 216 100% 58%;
   }
 }
 
@@ -108,4 +110,84 @@
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* ---------------------------------------------------------------------------
+   Shared design language with the landing site.
+
+   The app needs denser type and smaller controls than a marketing page, so this
+   ports the vocabulary rather than the sizes: the same display face at tight
+   tracking, the same blue, the same precise gradients.
+--------------------------------------------------------------------------- */
+
+:root {
+  --fy-blue: #0a6cff;
+  --fy-blue-deep: #003db0;
+  --fy-cyan: #5ccdff;
+}
+
+/* Headings and step names. Tight tracking is what reads as considered. */
+.fy-display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.fy-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fy-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* A hairline carrying a little blue at its centre. */
+.fy-hairline {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    hsl(var(--border)) 18%,
+    rgba(10, 108, 255, 0.3) 50%,
+    hsl(var(--border)) 82%,
+    transparent
+  );
+}
+
+/* Soft blue light, used behind the sign in card and the empty canvas. */
+.fy-light {
+  background:
+    radial-gradient(48rem 26rem at 50% -4rem, rgba(10, 108, 255, 0.13), transparent 70%),
+    radial-gradient(30rem 18rem at 84% 6rem, rgba(92, 205, 255, 0.1), transparent 70%);
+}
+
+.dark .fy-light {
+  background:
+    radial-gradient(48rem 26rem at 50% -4rem, rgba(10, 108, 255, 0.26), transparent 70%),
+    radial-gradient(30rem 18rem at 84% 6rem, rgba(92, 205, 255, 0.14), transparent 70%);
+}
+
+/* Deep navy mesh, matching the landing close panel. */
+.fy-deep {
+  background:
+    radial-gradient(30rem 18rem at 12% 0%, rgba(92, 205, 255, 0.28), transparent 65%),
+    radial-gradient(34rem 20rem at 90% 100%, rgba(10, 108, 255, 0.5), transparent 62%),
+    linear-gradient(160deg, #00205e 0%, #002f8f 55%, #0a3fb0 100%);
+}
+
+/* The one gradient that touches type, used sparingly. */
+.fy-gradient-text {
+  background: linear-gradient(100deg, var(--fy-blue) 0%, var(--fy-cyan) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Primary actions are pills, as on the landing site. */
+.fy-pill {
+  border-radius: 9999px;
 }

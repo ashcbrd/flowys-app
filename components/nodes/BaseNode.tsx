@@ -31,19 +31,21 @@ export function BaseNode({
     <div
       className={cn(
         "min-w-[220px] max-w-[280px] rounded-2xl bg-card transition-all duration-200",
-        // Border styling
-        "border-2",
+        // A hairline border and a low, wide shadow, the same card treatment the
+        // landing site uses. Selection is carried by a ring so the card's own
+        // geometry never shifts.
+        "overflow-hidden border",
         selected
-          ? "border-primary shadow-lg shadow-primary/20"
-          : "border-border/50 shadow-md",
+          ? "border-[var(--fy-blue)] ring-2 ring-[rgba(10,108,255,0.18)] shadow-[0_18px_44px_-24px_rgba(0,61,176,0.45)]"
+          : "border-border shadow-[0_10px_30px_-22px_rgba(11,17,32,0.35)]",
         // Hover effect
-        "hover:shadow-lg hover:border-border"
+        "hover:shadow-[0_18px_44px_-26px_rgba(0,61,176,0.4)]"
       )}
     >
       {/* Header with icon and label */}
       <div
         className={cn(
-          "flex items-center gap-3 px-4 py-3 rounded-t-xl",
+          "flex items-center gap-3 px-4 py-3",
           "bg-gradient-to-r",
           gradient || color
         )}
@@ -145,7 +147,7 @@ function checkIfConfigured(config: Record<string, unknown>): boolean {
 }
 
 function getNodePreview(config: Record<string, unknown>): string | null {
-  // AI step — show the instruction. The last non-empty line is conventionally
+  // AI step, show the instruction. The last non-empty line is conventionally
   // the ask ("Find the themes across all of these."); earlier lines are the data
   // being handed over, which makes a poor summary.
   const instruction = (config.userPromptTemplate ?? config.prompt) as
@@ -216,7 +218,7 @@ function getNodePreview(config: Record<string, unknown>): string | null {
 }
 
 function getNodeSubtitle(config: Record<string, unknown>): string | null {
-  // AI step — how many named values it hands to the next step.
+  // AI step, how many named values it hands to the next step.
   const schema = config.outputSchema as
     | { properties?: Record<string, unknown> }
     | undefined;

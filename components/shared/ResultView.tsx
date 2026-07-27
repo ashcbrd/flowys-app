@@ -11,7 +11,7 @@ import { humanizeFieldName } from "@/lib/vocabulary";
  *
  * Every result panel used to print `JSON.stringify(output, null, 2)` in a
  * monospace block. That put braces, quotes and square brackets in front of
- * exactly the people the rest of this app stopped asking to write JSON — the
+ * exactly the people the rest of this app stopped asking to write JSON. The
  * result of a step is the thing they came to look at.
  *
  * Structure is preserved, not hidden: named values become labelled rows, lists
@@ -166,7 +166,7 @@ export function ResultView({
 
       <div className={cn(copyable && "pr-7")}>
         {prose !== null ? (
-          // The step already produced text for a person to read — show it as-is.
+          // The step already produced text for a person to read, show it as-is.
           <p className="text-sm whitespace-pre-wrap break-words">{prose}</p>
         ) : (
           <ValueBlock value={value} depth={0} />

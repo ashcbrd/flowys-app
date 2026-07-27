@@ -71,11 +71,17 @@ interface ChatResponse {
 
 // Using Next.js API routes - no external API base needed
 
+/**
+ * Openers written as the job to be done, not as the parts to assemble.
+ *
+ * Someone opening this panel has a pile of something to read, not a shopping
+ * list of node types. Each one is a whole task Flux can build end to end.
+ */
 const DEFAULT_SUGGESTIONS = [
-  "Create a text analysis workflow",
-  "Build a simple AI chatbot workflow",
-  "What node types are available?",
-  "Help me fix my workflow",
+  "Read a support email and tell me how urgent it is",
+  "Turn a batch of reviews into what to fix first",
+  "Pull the decisions and to-dos out of a meeting transcript",
+  "Something in my workflow isn't working",
 ];
 
 export function FluxWidget() {
@@ -107,7 +113,7 @@ export function FluxWidget() {
         {
           role: "assistant",
           content:
-            "Hey! I'm Flux, your workflow assistant. I can create workflows for you, help you debug issues, and answer questions. Try asking me to create a workflow!",
+            "I'm Flux. Tell me the job you want done in plain words and I'll build the workflow for it. I can also look at what's on your canvas and work out why a run didn't go the way you expected.",
           suggestions: DEFAULT_SUGGESTIONS,
         },
       ]);
@@ -326,7 +332,7 @@ export function FluxWidget() {
           onClick={() => setIsOpen(true)}
           className={cn(
             "fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 text-white",
-            "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 hover:scale-105 active:scale-95"
+            "bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95 hover:scale-105 active:scale-95"
           )}
         >
           <Bot className="h-5 w-5" />
@@ -338,7 +344,7 @@ export function FluxWidget() {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col w-[420px] h-[600px] bg-background border rounded-2xl shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-indigo-600 rounded-t-2xl">
+          <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
                 <Sparkles className="h-5 w-5 text-white" />
@@ -368,7 +374,7 @@ export function FluxWidget() {
               >
                 {msg.role === "assistant" && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center">
                       <Sparkles className="h-3 w-3 text-white" />
                     </div>
                     <span>Flux</span>
@@ -380,7 +386,7 @@ export function FluxWidget() {
                   className={cn(
                     "max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
                     msg.role === "user"
-                      ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md"
+                      ? "bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] text-white rounded-br-md"
                       : "bg-muted rounded-tl-md"
                   )}
                 >
@@ -404,7 +410,7 @@ export function FluxWidget() {
                     <Button
                       size="sm"
                       onClick={() => handleCreateWorkflow(msg.workflowGeneration!)}
-                      className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 rounded-lg"
+                      className="w-full bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95 text-white border-0 rounded-lg"
                     >
                       <Wand2 className="h-3 w-3 mr-2" />
                       Create This Workflow
@@ -495,7 +501,7 @@ export function FluxWidget() {
 
             {isLoading && (
               <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center">
                   <Sparkles className="h-3 w-3 text-white" />
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground bg-muted rounded-2xl rounded-tl-md px-4 py-3">
@@ -515,7 +521,7 @@ export function FluxWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask me to create a workflow..."
+                placeholder="Describe the job you want done"
                 disabled={isLoading}
                 rows={1}
                 className={cn(
@@ -531,13 +537,13 @@ export function FluxWidget() {
                 size="icon"
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
-                className="h-11 w-11 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                className="h-11 w-11 rounded-xl bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground text-center mt-2">
-              Try: "Create a workflow that summarizes articles"
+              Try: "Read a review file and tell me what to fix first"
             </p>
           </div>
         </div>

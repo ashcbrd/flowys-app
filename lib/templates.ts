@@ -4,7 +4,7 @@
  * Ready-made workflows a user can run without building anything.
  *
  * Every template runs on steps that need no app connections and no
- * user-specific URLs — questions, AI steps, rules, and a result. A template that
+ * user-specific URLs, questions, AI steps, rules, and a result. A template that
  * needed an account the user hasn't linked, or a web address only they know,
  * isn't a starting point; it's a dead end.
  *
@@ -74,7 +74,7 @@ function think(
     data: {
       label,
       config: {
-        // No provider or model — the engine resolves which AI to use.
+        // No provider or model, the engine resolves which AI to use.
         systemPrompt: opts.system,
         userPromptTemplate: opts.prompt,
         temperature: opts.temperature ?? 0.3,
@@ -158,8 +158,8 @@ function fetchFrom(
  * Sends the finished result somewhere.
  *
  * Points at a public echo service so the step works out of the box and you can
- * see it succeed. Swap the address for your own — a webhook.site link shows each
- * delivery in a browser — and it keeps working.
+ * see it succeed. Swap the address for your own, a webhook.site link shows each
+ * delivery in a browser, and it keeps working.
  *
  * `continueOnError` matters: if the receiver is down, that should not throw away
  * a result the earlier steps already produced.
@@ -188,7 +188,7 @@ function sendTo(
   };
 }
 
-/** `wire("a>b", "b>c")` — keeps a wide graph's edges legible. */
+/** `wire("a>b", "b>c")`, keeps a wide graph's edges legible. */
 function wire(...pairs: string[]) {
   return pairs.map((pair, i) => {
     const [source, target] = pair.split(">");
@@ -213,7 +213,7 @@ const SUPPORT_TRIAGE: WorkflowTemplate = {
           type: "string",
           required: true,
           label: "Paste the email",
-          description: "Include the whole thing — signature and all.",
+          description: "Include the whole thing, signature and all.",
           multiline: true,
         },
         { name: "customerName", type: "string", label: "Who sent it", placeholder: "Priya at Acme" },
@@ -396,7 +396,7 @@ const LEAD_QUALIFY: WorkflowTemplate = {
           type: "string",
           required: true,
           label: "What did they send?",
-          placeholder: "Hi — we're a 40-person agency and budget is approved…",
+          placeholder: "Hi, we're a 40-person agency and budget is approved…",
           multiline: true,
         },
         {
@@ -578,9 +578,9 @@ const MEETING_NOTES: WorkflowTemplate = {
   id: "meeting-actions",
   name: "Turn a meeting recording into decisions and actions",
   description:
-    "15 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks — then drafts the follow-up message.",
+    "15 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks, then drafts the follow-up message.",
   category: "Meetings",
-  needs: "A transcript file — a .txt export from your recorder works",
+  needs: "A transcript file, a .txt export from your recorder works",
   workflow: {
     nodes: [
       ask("n1", "The meeting", 0, 2, [
@@ -623,14 +623,14 @@ const MEETING_NOTES: WorkflowTemplate = {
           "You extract action items from transcripts. Each action names an owner where one was stated, or says 'unassigned'. Never invent owners.",
         prompt: "Transcript:\n\n{{transcript}}\n\nList the actions, each with its owner.",
         gives: {
-          actions: { type: "array", description: "Each as 'Owner — action'" },
+          actions: { type: "array", description: "Each as 'Owner, action'" },
           unassignedCount: { type: "number", description: "How many actions have no owner" },
         },
       }),
 
       think("n4", "Find what's still open", 1, 3, {
         system:
-          "You spot unresolved threads in meetings — questions asked but not answered, topics deferred.",
+          "You spot unresolved threads in meetings, questions asked but not answered, topics deferred.",
         prompt: "Transcript:\n\n{{transcript}}\n\nWhat was left unresolved?",
         gives: {
           openQuestions: { type: "array", description: "Questions raised but not answered" },
@@ -772,7 +772,7 @@ const REVIEW_THEMES: WorkflowTemplate = {
   description:
     "11 steps. Reads a batch of reviews, finds the themes and the quiet signals, works out what's costing you customers, and says what to fix first.",
   category: "Customer feedback",
-  needs: "A file of reviews — a CSV export works well",
+  needs: "A file of reviews, a CSV export works well",
   workflow: {
     nodes: [
       ask("n1", "The reviews", 0, 1, [
@@ -817,7 +817,7 @@ const REVIEW_THEMES: WorkflowTemplate = {
 
       think("n3", "Find the quiet signals", 1, 2, {
         system:
-          "You spot feedback mentioned only once or twice that still matters — early warnings, not noise.",
+          "You spot feedback mentioned only once or twice that still matters, early warnings, not noise.",
         prompt: "Reviews:\n\n{{reviews}}\n\nWhat was mentioned rarely but looks important?",
         gives: {
           quietSignals: { type: "array", description: "Rare but notable mentions" },
@@ -901,7 +901,7 @@ const REVIEW_THEMES: WorkflowTemplate = {
           "---",
           "",
           "## Biggest risk",
-          "**{{biggestRisk}}** — {{riskReason}}",
+          "**{{biggestRisk}}**, {{riskReason}}",
           "",
           "## Fix this first",
           "**{{fixFirst}}**",

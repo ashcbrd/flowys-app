@@ -50,7 +50,7 @@ export default function DocsPage() {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold">Flowys</span>

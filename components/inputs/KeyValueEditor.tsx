@@ -24,7 +24,7 @@ export interface KeyValueEditorProps {
   valuePlaceholder?: string;
   emptyMessage?: string;
   addLabel?: string;
-  /** Replace the value control — used to inject a template/field picker. */
+  /** Replace the value control, used to inject a template/field picker. */
   renderValue?: (props: {
     value: string;
     onChange: (next: string) => void;

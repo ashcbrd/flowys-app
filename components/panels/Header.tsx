@@ -287,7 +287,7 @@ export function Header() {
         {/* Left: Logo + Workflow Name */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center shadow-md">
               <span className="text-white font-bold text-sm">F</span>
             </div>
           </Link>
@@ -404,7 +404,7 @@ export function Header() {
           <Button
             onClick={startRun}
             disabled={isExecuting}
-            className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-md"
+            className="fy-pill gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] shadow-sm hover:opacity-95"
           >
             {isExecuting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
