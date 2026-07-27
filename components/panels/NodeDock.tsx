@@ -18,11 +18,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useWorkflowStore } from "@/store/workflow";
+import { useWorkflowStore, type NodeType } from "@/store/workflow";
 import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
 
-interface NodeType {
-  type: string;
+interface DockItem {
+  /** The kind of step this tile creates. */
+  type: NodeType;
   label: string;
   description: string;
   icon: React.ReactNode;
@@ -32,7 +33,7 @@ interface NodeType {
   comingSoon?: boolean;
 }
 
-const nodeTypes: NodeType[] = [
+const nodeTypes: DockItem[] = [
   {
     type: "input",
     label: "Input",
@@ -98,11 +99,12 @@ export function NodeDock() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { toast } = useToast();
   const nodes = useWorkflowStore((state) => state.nodes);
+  const addNode = useWorkflowStore((state) => state.addNode);
 
   const nodeCount = nodes.length;
   const isAtNodeLimit = nodeCount >= MAX_NODE_COUNT;
 
-  const onDragStart = (event: DragEvent, node: NodeType) => {
+  const onDragStart = (event: DragEvent, node: DockItem) => {
     if (node.comingSoon) {
       event.preventDefault();
       toast({
@@ -126,6 +128,43 @@ export function NodeDock() {
     event.dataTransfer.effectAllowed = "move";
   };
 
+  /**
+   * Tapping adds the step, which is the only way in on a touch screen.
+   *
+   * Dragging is an HTML5 drag and never fires from a finger, so on a phone the
+   * dock was decoration. A tap drops the step to the right of the last one, on a
+   * gentle diagonal, so a tapped-together workflow still reads left to right.
+   */
+  const addByTap = (node: DockItem) => {
+    if (node.comingSoon) {
+      toast({
+        title: `${node.label}: ${COMING_SOON_LABEL}`,
+        description: "Connecting other apps isn't ready yet. Everything else works.",
+      });
+      return;
+    }
+
+    if (isAtNodeLimit) {
+      toast({
+        title: "That's the limit",
+        description: `A workflow can have up to ${MAX_NODE_COUNT} steps.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const last = nodes[nodes.length - 1];
+    const position = last
+      ? { x: last.position.x + 320, y: last.position.y + 40 }
+      : { x: 120, y: 160 };
+
+    addNode(node.type, position);
+    toast({
+      title: `${node.label} step added`,
+      description: "Tap it to set it up.",
+    });
+  };
+
   // Calculate scale for dock magnification effect
   const getScale = (index: number) => {
     if (hoveredIndex === null) return 1;
@@ -137,11 +176,12 @@ export function NodeDock() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[calc(100vw-1.5rem)]">
         {/* Floating dock container */}
         <div
           className={cn(
             "flex items-end gap-1 px-3 py-2.5 rounded-2xl",
+            "overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             // Glassmorphism effect
             "bg-white/70 dark:bg-gray-900/70",
             "backdrop-blur-xl backdrop-saturate-150",
@@ -157,6 +197,7 @@ export function NodeDock() {
                   <div
                     draggable={!node.comingSoon}
                     onDragStart={(e) => onDragStart(e, node)}
+                    onClick={() => addByTap(node)}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}
                     style={{
@@ -169,7 +210,7 @@ export function NodeDock() {
                       "select-none relative",
                       node.comingSoon
                         ? "cursor-not-allowed opacity-50"
-                        : "cursor-grab hover:bg-white/50 dark:hover:bg-white/10 active:cursor-grabbing active:scale-95"
+                        : "cursor-pointer hover:bg-white/50 dark:hover:bg-white/10 active:scale-95 sm:cursor-grab sm:active:cursor-grabbing"
                     )}
                   >
                     {/* Icon container with gradient */}

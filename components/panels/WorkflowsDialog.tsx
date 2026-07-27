@@ -61,7 +61,8 @@ export function WorkflowsDialog({ open: controlledOpen, onOpenChange }: Workflow
   const [selectedWorkflowForVersions, setSelectedWorkflowForVersions] = useState<Workflow | null>(null);
 
   const router = useRouter();
-  const { loadWorkflow, hasDraft, loadDraft, draftWorkflow } = useWorkflowStore();
+  const { loadWorkflow, hasDraft, loadDraft, draftWorkflow, forgetWorkflows } =
+    useWorkflowStore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -182,6 +183,8 @@ export function WorkflowsDialog({ open: controlledOpen, onOpenChange }: Workflow
     try {
       await Promise.all(workflowsToDelete.map((id) => api.workflows.delete(id)));
       setWorkflows((prev) => prev.filter((w) => !workflowsToDelete.includes(w.id)));
+      // If one of these was open, take it off the canvas too.
+      forgetWorkflows(workflowsToDelete);
       setSelectedWorkflows((prev) => {
         const newSet = new Set(prev);
         workflowsToDelete.forEach((id) => newSet.delete(id));

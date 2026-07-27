@@ -152,7 +152,7 @@ export function Sidebar() {
             Instructions
           </h2>
           <div className="text-xs text-muted-foreground space-y-2">
-            <p>1. Drag a step onto the canvas</p>
+            <p>1. Add a step to the canvas</p>
             <p>2. Join steps by dragging between the dots</p>
             <p>3. Click a step to set it up</p>
             <p>4. Press Run when you're ready</p>

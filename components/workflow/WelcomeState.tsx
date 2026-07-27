@@ -33,7 +33,7 @@ export function WelcomeState() {
         {/* Text */}
         <h2 className="fy-display text-2xl mb-2">Start building</h2>
         <p className="text-muted-foreground text-sm max-w-[240px] mb-4">
-          Pick something that already works, or drag a step from below.
+          Pick something that already works, or add a step from below.
         </p>
 
         {/* The container disables pointer events so the canvas stays draggable

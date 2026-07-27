@@ -333,7 +333,7 @@ export function FluxWidget() {
           className={cn(
             // fy-flux-launcher lets an open side panel move this out of the way,
             // it used to sit on top of the last result in the drawer.
-            "fy-flux-launcher fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 text-white",
+            "fy-flux-launcher fixed bottom-28 right-4 sm:bottom-6 sm:right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 text-white",
             "bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95 hover:scale-105 active:scale-95"
           )}
         >
@@ -344,7 +344,7 @@ export function FluxWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col w-[420px] h-[600px] bg-background border rounded-2xl shadow-2xl">
+        <div className="fixed inset-x-3 bottom-3 z-[9999] flex h-[75vh] flex-col rounded-2xl border bg-background shadow-2xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[420px]">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] rounded-t-2xl">
             <div className="flex items-center gap-3">
