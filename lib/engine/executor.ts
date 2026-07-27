@@ -203,7 +203,7 @@ export class WorkflowExecutor {
         when: lower.includes("timed out") || lower.includes("timeout"),
         cause: "The step took longer than the time allowed.",
         fixes: [
-          "Run it again — slow services often recover on the next attempt.",
+          "Run it again, slow services often recover on the next attempt.",
           "If this step handles a lot of data, split the work into smaller pieces.",
         ],
       },
@@ -224,7 +224,7 @@ export class WorkflowExecutor {
         cause: "The AI's answer was cut off before it finished.",
         fixes: [
           "Ask for fewer pieces of information in this step.",
-          "Ask for shorter answers in the instruction — for example, add \"keep each answer under a sentence\".",
+          "Ask for shorter answers in the instruction, for example, add \"keep each answer under a sentence\".",
           "Raise \"Longest reply\" on this step.",
         ],
       },
@@ -232,7 +232,7 @@ export class WorkflowExecutor {
         when: lower.includes("json") || lower.includes("parse"),
         cause: "The AI's answer didn't come back in the shape this step asked for.",
         fixes: [
-          "Simplify what you're asking the AI to give back — fewer named pieces is more reliable.",
+          "Simplify what you're asking the AI to give back, fewer named pieces is more reliable.",
           "Make the instruction more specific about what each piece should contain.",
         ],
       },
@@ -251,7 +251,7 @@ export class WorkflowExecutor {
           lower.includes("list of items"),
         cause: "This step works on a list, but what arrived wasn't a list.",
         fixes: [
-          "Check what the previous step produced — click it to see its last result.",
+          "Check what the previous step produced, click it to see its last result.",
           "If the data comes from a web address, confirm that address returns several items rather than one.",
         ],
       },
@@ -283,7 +283,7 @@ export class WorkflowExecutor {
         cause: "The service couldn't be reached.",
         fixes: [
           "Check the web address is correct.",
-          "The service may be down — try again shortly.",
+          "The service may be down, try again shortly.",
         ],
       },
     ];
@@ -301,7 +301,7 @@ export class WorkflowExecutor {
       suggestedFixes.push(
         `Open "${stepName}" and check its settings.`,
         "Click the step before it to see what it produced.",
-        "Try running the workflow again — some failures are temporary."
+        "Try running the workflow again, some failures are temporary."
       );
     }
 

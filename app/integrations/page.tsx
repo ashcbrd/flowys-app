@@ -814,7 +814,7 @@ export default function IntegrationsPage() {
 
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold">
-              App connections — {COMING_SOON_LABEL}
+              App connections: {COMING_SOON_LABEL}
             </h1>
             <p className="text-muted-foreground">
               Linking Flowys to Slack, Notion, GitHub and the rest is on the way.

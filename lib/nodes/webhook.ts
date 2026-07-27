@@ -33,7 +33,7 @@ export class WebhookNodeHandler implements NodeHandler {
       if (config.payloadTemplate) {
         // Substitute into the parsed structure, not into JSON text. Interpolating
         // a stringified template and re-parsing it breaks the moment a value
-        // contains a newline or a quote — which any multi-line result does — and
+        // contains a newline or a quote, which any multi-line result does, and
         // failed with a message about the template rather than the real cause.
         payload = interpolateDeep(config.payloadTemplate, {
           ...context.inputs,
@@ -155,7 +155,7 @@ export class WebhookNodeHandler implements NodeHandler {
           : `Could not reach ${url.toString()}`;
 
         // `continueOnError` used to apply only to HTTP error responses, so a
-        // receiver that was slow or unreachable still failed the whole run —
+        // receiver that was slow or unreachable still failed the whole run,
         // throwing away results the earlier steps had already produced. Those are
         // the cases it most needs to cover.
         if (config.continueOnError) {

@@ -200,7 +200,7 @@ export function RunForm({
                   value === undefined || value === null ? "" : String(value);
 
                 // Honour the declared intent, but also switch as soon as the
-                // content itself is clearly more than a line — otherwise pasting
+                // content itself is clearly more than a line, otherwise pasting
                 // an email into a field nobody marked leaves it unreadable.
                 const long =
                   field.multiline || text.includes("\n") || text.length > 120;

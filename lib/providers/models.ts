@@ -5,7 +5,7 @@
  *
  * Model IDs are load-bearing: a retired or misspelled ID fails at run time with
  * a 404 that reads like a broken workflow rather than a bad setting. Keeping the
- * list here — instead of a free-text box and a default buried in a provider —
+ * list here, instead of a free-text box and a default buried in a provider,
  * means the UI can only offer IDs that exist, and there is one place to update
  * when a model is retired.
  *
@@ -63,7 +63,7 @@ export const MODELS: ModelOption[] = [
  * The one provider this deployment is configured for.
  *
  * Only an OpenAI key is provisioned, so a workflow step does not choose a
- * provider or a model — offering the choice would only let a user select
+ * provider or a model, offering the choice would only let a user select
  * something that cannot run. The UI therefore asks nothing about this, and
  * `resolveAiTarget` is the single place that decides.
  *
@@ -76,7 +76,7 @@ export const FIXED_MODEL = "gpt-4o-mini";
 /**
  * What an AI step should actually call, whatever its stored config says.
  *
- * Saved workflows carry a provider and model from when the choice existed —
+ * Saved workflows carry a provider and model from when the choice existed,
  * including retired Anthropic models that would 404 and Anthropic steps that
  * have no key. Overriding them is what keeps those workflows running.
  */

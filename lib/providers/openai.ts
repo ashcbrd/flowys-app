@@ -143,7 +143,7 @@ export class OpenAIProvider implements LLMProvider {
   /**
    * Strict structured outputs cannot express an object with no declared
    * properties. Rather than let the request fail, such a schema drops to the
-   * unconstrained JSON tier — the response is still parsed and validated
+   * unconstrained JSON tier, the response is still parsed and validated
    * downstream, just not enforced by the provider.
    */
   private canUseStrictSchema(schema: unknown): boolean {

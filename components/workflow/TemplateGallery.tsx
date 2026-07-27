@@ -54,9 +54,11 @@ export function TemplateGallery({ open, onOpenChange }: TemplateGalleryProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Start from a template</DialogTitle>
+          <DialogTitle className="fy-display text-2xl">
+            Start from a template
+          </DialogTitle>
           <DialogDescription>
-            Each of these works straight away — no accounts to connect. You can
+            Each of these works straight away, no accounts to connect. You can
             change anything afterwards.
           </DialogDescription>
         </DialogHeader>
@@ -73,10 +75,10 @@ export function TemplateGallery({ open, onOpenChange }: TemplateGalleryProps) {
                   <button
                     key={template.id}
                     onClick={() => use(template)}
-                    className="w-full text-left p-3 rounded-lg border hover:border-primary hover:bg-accent transition-colors group"
+                    className="w-full text-left p-4 rounded-2xl border bg-card hover:border-[var(--fy-blue)] hover:shadow-[0_16px_40px_-28px_rgba(0,61,176,0.45)] transition-all group"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center shrink-0">
                         <Sparkles className="h-4 w-4 text-white" />
                       </div>
 
@@ -109,7 +111,7 @@ export function TemplateGalleryTrigger() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="gap-2">
+      <Button onClick={() => setOpen(true)} className="fy-pill gap-2">
         <Sparkles className="h-4 w-4" />
         Start from a template
       </Button>

@@ -2,7 +2,7 @@
  * Plain-Language Vocabulary
  *
  * Single source of truth mapping stored config values to the labels shown in the
- * UI. Stored values never change — this is a presentation layer only, so every
+ * UI. Stored values never change, this is a presentation layer only, so every
  * saved workflow keeps working.
  */
 
@@ -100,8 +100,8 @@ export const AI_PROVIDERS: Term[] = [
  *
  * `value` here is the literal operator token that `LogicNodeHandler.
  * evaluateCondition` parses. That parser expects exactly
- * `<path> <operator> <value>` and recognises a fixed set of tokens — it does not
- * evaluate JavaScript — so these must stay in its vocabulary.
+ * `<path> <operator> <value>` and recognises a fixed set of tokens, it does not
+ * evaluate JavaScript, so these must stay in its vocabulary.
  */
 export interface Operator {
   /** The operator token written into the stored condition string. */
