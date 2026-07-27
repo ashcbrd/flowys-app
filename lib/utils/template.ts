@@ -18,7 +18,7 @@ export type MissingBehavior = "keep" | "empty";
 /**
  * How a list is rendered when substituted into text.
  *
- * `json` is required wherever the result is machine-read — a request body, a
+ * `json` is required wherever the result is machine-read, a request body, a
  * webhook payload. `list` is for prose a person reads, where a raw JSON array
  * looks like a bug.
  */

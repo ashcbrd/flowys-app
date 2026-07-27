@@ -2,7 +2,7 @@
  * Available Field Derivation
  *
  * Works out which values a node can reference, by walking the graph backwards
- * from that node — the same reverse traversal the executor performs when it
+ * from that node, the same reverse traversal the executor performs when it
  * gathers a node's inputs.
  *
  * Each upstream node contributes whatever it declares in its own config. Where a

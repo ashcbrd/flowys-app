@@ -212,9 +212,9 @@ export function NodeConfigPanel() {
           onClick={handleSave}
           disabled={!hasChanges && !isSaved}
           className={cn(
-            "w-full gap-2 transition-all",
+            "fy-pill w-full gap-2 transition-all",
             hasChanges
-              ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              ? "bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95"
               : isSaved
               ? "bg-green-500 hover:bg-green-500"
               : "bg-muted text-muted-foreground hover:bg-muted"
@@ -440,7 +440,7 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
 
             <p className="text-[11px] text-muted-foreground">
               Saved as{" "}
-              <span className="font-medium">{field.name || "unnamed"}</span> — other
+              <span className="font-medium">{field.name || "unnamed"}</span>. Other
               steps use this name to refer to the answer.
             </p>
           </div>
@@ -602,7 +602,7 @@ function ApiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
  * stored shape identical while removing the need to write JSON by hand.
  *
  * A legacy value that isn't valid JSON stays editable as text rather than being
- * silently discarded — otherwise a saved workflow could lose its body.
+ * silently discarded, otherwise a saved workflow could lose its body.
  */
 function RequestBodyEditor({
   body,
@@ -790,7 +790,7 @@ function AiNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
 
         {propsList.length === 0 && (
           <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed">
-Nothing named yet — the AI will just return plain text.
+Nothing named yet, the AI will just return plain text.
           </p>
         )}
 
@@ -1018,7 +1018,7 @@ function LogicNodeConfig({
 
           {mappingsList.length === 0 && (
             <p className="text-xs text-muted-foreground py-2 text-center border rounded border-dashed">
-              Nothing set — everything passes through unchanged
+              Nothing set, everything passes through unchanged
             </p>
           )}
 
@@ -1211,7 +1211,7 @@ function IntegrationNodeConfig(props: ConfigProps) {
       <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
         <Plug className="h-5 w-5 mx-auto text-muted-foreground" />
         <p className="text-sm font-medium">
-          App connections — {COMING_SOON_LABEL}
+          App connections: {COMING_SOON_LABEL}
         </p>
         <p className="text-xs text-muted-foreground">
           Linking Flowys to other apps isn&apos;t ready yet, so this step

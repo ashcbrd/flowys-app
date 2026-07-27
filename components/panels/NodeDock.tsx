@@ -106,7 +106,7 @@ export function NodeDock() {
     if (node.comingSoon) {
       event.preventDefault();
       toast({
-        title: `${node.label} — ${COMING_SOON_LABEL}`,
+        title: `${node.label}: ${COMING_SOON_LABEL}`,
         description: "Connecting other apps isn't ready yet. Everything else works.",
       });
       return;

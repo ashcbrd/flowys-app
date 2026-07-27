@@ -108,7 +108,7 @@ export default function TutorialPage() {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold">Flowys</span>
@@ -129,7 +129,7 @@ export default function TutorialPage() {
       {/* Progress Bar */}
       <div className="h-1 bg-muted">
         <div
-          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+          className="h-full bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -190,12 +190,12 @@ export default function TutorialPage() {
           </span>
 
           {currentStep < STEPS.length - 1 ? (
-            <Button onClick={nextStep} className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600">
+            <Button onClick={nextStep} className="gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]">
               Next
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button asChild className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600">
+            <Button asChild className="gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]">
               <Link href="/workflow">
                 Open Editor
                 <Rocket className="h-4 w-4" />
@@ -449,7 +449,7 @@ function DropZone({
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-[500px] p-8 text-center">
-      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-8 shadow-xl animate-pulse">
+      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center mb-8 shadow-xl animate-pulse">
         <Zap className="h-12 w-12 text-white" />
       </div>
       <h2 className="text-2xl font-bold mb-4">See how easy this is</h2>
@@ -480,7 +480,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
             <span>Output</span>
           </div>
         </div>
-        <Button onClick={onNext} size="lg" className="mt-4 gap-2 bg-gradient-to-r from-blue-500 to-indigo-600">
+        <Button onClick={onNext} size="lg" className="mt-4 gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]">
           Let's Go
           <ArrowRight className="h-4 w-4" />
         </Button>
@@ -615,7 +615,7 @@ function ConfigureInputStep({ phase }: { phase: number }) {
             <div className="relative">
               <Button
                 onClick={() => setConfigured(true)}
-                className="w-full gap-2 bg-gradient-to-r from-blue-500 to-indigo-600"
+                className="w-full gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]"
               >
                 <Check className="h-4 w-4" />
                 Save Configuration
@@ -721,7 +721,7 @@ function ConnectNodesStep({ phase }: { phase: number }) {
           {/* Connection Line */}
           {step === 2 && (
             <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-20 h-0.5">
-              <div className="w-full h-full bg-gradient-to-r from-blue-500 to-violet-500 animate-in slide-in-from-left duration-500" />
+              <div className="w-full h-full bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-cyan)] animate-in slide-in-from-left duration-500" />
             </div>
           )}
 
@@ -785,7 +785,7 @@ function ConfigureAIStep({ phase }: { phase: number }) {
           icon={FileInput}
           preview="1 field: text"
         />
-        <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-violet-500" />
+        <div className="w-16 h-0.5 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-cyan)]" />
         <div className="relative">
           <MockNode
             type="ai"
@@ -839,7 +839,7 @@ function ConfigureAIStep({ phase }: { phase: number }) {
             <div className="relative">
               <Button
                 onClick={() => setConfigured(true)}
-                className="w-full gap-2 bg-gradient-to-r from-blue-500 to-indigo-600"
+                className="w-full gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]"
               >
                 <Check className="h-4 w-4" />
                 Save Configuration
@@ -917,7 +917,7 @@ function AddOutputStep({ phase }: { phase: number }) {
             icon={FileInput}
             preview="1 field: text"
           />
-          <div className="w-12 h-0.5 bg-gradient-to-r from-blue-500 to-violet-500" />
+          <div className="w-12 h-0.5 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-cyan)]" />
           <div className="relative">
             <MockNode
               type="ai"
@@ -1024,7 +1024,7 @@ function RunWorkflowStep({ phase }: { phase: number }) {
       {/* Mock Header */}
       <div className="h-14 border-b bg-card flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center">
             <Zap className="h-4 w-4 text-white" />
           </div>
           <span className="font-medium">My First Workflow</span>
@@ -1033,7 +1033,7 @@ function RunWorkflowStep({ phase }: { phase: number }) {
           <Button
             onClick={runWorkflow}
             disabled={running || complete}
-            className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600"
+            className="gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]"
           >
             {running ? (
               <>
@@ -1070,7 +1070,7 @@ function RunWorkflowStep({ phase }: { phase: number }) {
             preview="1 field: text"
           />
         </div>
-        <div className={cn("w-12 h-0.5 bg-gradient-to-r from-blue-500 to-violet-500", activeNode === "ai" && "h-1")} />
+        <div className={cn("w-12 h-0.5 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-cyan)]", activeNode === "ai" && "h-1")} />
         <div className={cn("transition-all duration-300", activeNode === "ai" && "scale-110")}>
           <MockNode
             type="ai"
@@ -1181,7 +1181,7 @@ function CompleteStep({ showConfetti }: { showConfetti: boolean }) {
         </div>
       </div>
 
-      <Button asChild size="lg" className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600">
+      <Button asChild size="lg" className="gap-2 bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)]">
         <Link href="/workflow">
           <Rocket className="h-5 w-5" />
           Build Your First Workflow

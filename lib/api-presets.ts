@@ -3,7 +3,7 @@
  *
  * Pre-filled configurations for the API step.
  *
- * The API step can already reach any service with a public endpoint — but it
+ * The API step can already reach any service with a public endpoint, but it
  * asks for a URL, a method, headers, and a body, which is a developer's mental
  * model. A preset supplies all of that and leaves the user one thing to provide:
  * their own key or webhook URL.
@@ -27,7 +27,7 @@ export interface PresetSecret {
 }
 
 /**
- * A non-secret value the request also needs — a database id, a table name, a
+ * A non-secret value the request also needs, a database id, a table name, a
  * from-address. Collected in the same dialog so the user never has to hunt for a
  * placeholder buried in a request body.
  */
@@ -154,7 +154,7 @@ export const API_PRESETS: ApiPreset[] = [
       {
         token: "YOUR_DATABASE_ID",
         label: "Which database?",
-        help: "Open the database in Notion — the id is the long code in the address bar, before the ?.",
+        help: "Open the database in Notion, the id is the long code in the address bar, before the ?.",
         placeholder: "a1b2c3d4e5f6...",
       },
     ],
@@ -187,7 +187,7 @@ export const API_PRESETS: ApiPreset[] = [
       {
         token: "YOUR_BASE_ID",
         label: "Which base?",
-        help: "Open your base — the id starts with app and is in the address bar.",
+        help: "Open your base, the id starts with app and is in the address bar.",
         placeholder: "appXXXXXXXX",
       },
       {

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 /**
  * Upload a document and hand its text to the workflow.
  *
- * The file is read in the browser and only its text is passed along — nothing is
+ * The file is read in the browser and only its text is passed along, nothing is
  * uploaded to a server and nothing is stored. That keeps this a real feature with
  * no infrastructure behind it, and means the AI steps downstream receive a
  * plain string exactly as if the text had been pasted in.
@@ -33,7 +33,7 @@ const TEXT_EXTENSIONS = [
   ".eml",
 ];
 
-/** 2 MB — comfortably more than any pasted-text equivalent, small enough to stay snappy. */
+/** 2 MB, comfortably more than any pasted-text equivalent, small enough to stay snappy. */
 const MAX_BYTES = 2 * 1024 * 1024;
 
 function isReadable(file: File): boolean {
@@ -62,7 +62,7 @@ export function FileField({ value, onChange, id, className }: FileFieldProps) {
 
     if (!isReadable(file)) {
       setError(
-        "We can read text documents — .txt, .csv, .md, .json and similar. PDFs and images aren't supported yet; copy the text in instead."
+        "We can read text documents: .txt, .csv, .md, .json and similar. PDFs and images aren't supported yet; copy the text in instead."
       );
       return;
     }
@@ -153,7 +153,7 @@ export function FileField({ value, onChange, id, className }: FileFieldProps) {
             {reading ? "Reading…" : "Choose a file or drop one here"}
           </span>
           <span className="text-xs text-muted-foreground">
-            Text documents — .txt, .csv, .md, .json
+            Text documents: .txt, .csv, .md, .json
           </span>
         </button>
       )}

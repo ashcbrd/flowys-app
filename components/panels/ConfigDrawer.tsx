@@ -263,7 +263,7 @@ export function ConfigDrawer() {
  * The Test tab for one step.
  *
  * Keyed on the step's id by its parent, so selecting a different step remounts
- * this with fresh state — no effect resetting things, and no chance of one
+ * this with fresh state, no effect resetting things, and no chance of one
  * step's sample values leaking into another's.
  */
 function StepTester({

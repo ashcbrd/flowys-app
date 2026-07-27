@@ -113,7 +113,7 @@ Always respond with ONLY valid JSON.`;
  * Strip any provider or model the assistant volunteered on an AI step.
  *
  * The prompt tells it not to emit these, but a stored provider/model would be
- * misleading in the saved workflow — the engine resolves the target itself.
+ * misleading in the saved workflow, the engine resolves the target itself.
  */
 function normalizeAiModels(nodes: unknown[]): unknown[] {
   return nodes.map((node) => {
@@ -128,14 +128,14 @@ function normalizeAiModels(nodes: unknown[]): unknown[] {
 export async function GET() {
   return NextResponse.json({
     suggestions: [
-      "Create a text summarization workflow",
-      "Build a sentiment analysis workflow",
-      "Create an API data enrichment workflow",
-      "Make a simple chatbot workflow",
-      "What node types are available?",
-      "How do I use variables?",
-      "Help me fix my workflow",
-      "Analyze my current workflow",
+      "Read a support email and tell me how urgent it is",
+      "Turn a batch of reviews into what to fix first",
+      "Pull the decisions and to-dos out of a meeting transcript",
+      "Score an enquiry and draft the reply",
+      "Summarise a long document into a few lines",
+      "Look up a public GitHub project and brief me on it",
+      "Something in my workflow isn't working",
+      "Explain what my workflow does right now",
     ],
   });
 }
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
         if (usesIntegrations) {
           result.message =
             "Connecting Flowys straight to other apps is coming soon, so I can't build that part yet. " +
-            "If the app has a web address I can call, an API step can reach it in the meantime — " +
+            "If the app has a web address I can call, an API step can reach it in the meantime, " +
             "or I can build the rest of the workflow now and you can add the app step later.";
           result.suggestions = [
             "Build the rest without the app step",

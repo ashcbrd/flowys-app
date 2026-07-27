@@ -18,7 +18,7 @@ import { humanizeFieldName } from "@/lib/vocabulary";
 /**
  * Recursive editor for any value a workflow config can hold.
  *
- * This mirrors the grammar of JSON itself — object, array, text, number, yes/no —
+ * This mirrors the grammar of JSON itself, object, array, text, number, yes/no,
  * rather than enumerating known config shapes. That is what lets us remove every
  * JSON textarea without any setting becoming unreachable: there is no value this
  * cannot represent.
@@ -99,7 +99,7 @@ interface ValueEditorProps {
   allowKindChange?: boolean;
   /** Fix the editor to one kind. */
   kind?: ValueKind;
-  /** Custom control for text values — used to inject the field picker. */
+  /** Custom control for text values, used to inject the field picker. */
   renderTextInput?: (props: {
     value: string;
     onChange: (next: string) => void;
