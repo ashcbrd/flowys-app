@@ -131,6 +131,7 @@ function WorkflowCanvasInner() {
           nodeStrokeWidth={3}
           zoomable
           pannable
+          className="hidden md:block"
         />
       </ReactFlow>
     </div>

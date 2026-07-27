@@ -41,20 +41,28 @@ export function Navbar({
   const { data: session } = useSession();
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+    <header className="h-14 border-b bg-card flex items-center justify-between gap-2 px-3 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        {/* On a phone the arrow carries the meaning on its own, and the word
+            costs room the page title needs. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="shrink-0 px-2 sm:px-3"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="h-6 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-5 w-5 text-primary" />}
-          <h1 className="text-lg font-semibold">{title}</h1>
+        <div className="hidden h-6 w-px bg-border sm:block" />
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon && <Icon className="h-5 w-5 shrink-0 text-primary" />}
+          <h1 className="truncate text-base font-semibold sm:text-lg">{title}</h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         {children}
 
         <ThemeToggle />
