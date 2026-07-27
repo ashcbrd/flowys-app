@@ -62,7 +62,7 @@ export class OutputNodeHandler implements NodeHandler {
 
   private formatText(context: NodeContext, config: OutputNodeConfig): Record<string, unknown> {
     if (config.template) {
-      const text = interpolateVariables(config.template, context.inputs, "keep", "list");
+      const text = interpolateVariables(config.template, context.inputs, "note", "list");
       return { result: text, format: "text" };
     }
 
@@ -76,7 +76,7 @@ export class OutputNodeHandler implements NodeHandler {
 
   private formatMarkdown(context: NodeContext, config: OutputNodeConfig): Record<string, unknown> {
     if (config.template) {
-      const md = interpolateVariables(config.template, context.inputs, "keep", "list");
+      const md = interpolateVariables(config.template, context.inputs, "note", "list");
       return { result: md, format: "markdown" };
     }
 
