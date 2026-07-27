@@ -147,3 +147,23 @@ describe("humanizeFieldName", () => {
     expect(humanizeFieldName("")).toBe("");
   });
 });
+
+describe("long-text fields", () => {
+  it("keeps a declared long field as long even when empty", () => {
+    // The decision must not depend on there being content yet — an empty
+    // "paste the email" box still needs room.
+    const fields: InputField[] = [
+      { name: "email", type: "string", multiline: true },
+    ];
+    expect(initialRunValues(fields).email).toBe("");
+    expect(fields[0].multiline).toBe(true);
+  });
+
+  it("still validates a long field as required", () => {
+    const fields: InputField[] = [
+      { name: "email", type: "string", required: true, multiline: true, label: "Paste the email" },
+    ];
+    expect(validateRunValues(fields, { email: "" })).toHaveProperty("email");
+    expect(validateRunValues(fields, { email: "line one\nline two" })).toEqual({});
+  });
+});

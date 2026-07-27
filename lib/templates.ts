@@ -148,6 +148,7 @@ const SUPPORT_TRIAGE: WorkflowTemplate = {
           required: true,
           label: "Paste the email",
           description: "Include the whole thing — signature and all.",
+          multiline: true,
         },
         { name: "customerName", type: "string", label: "Who sent it", placeholder: "Priya at Acme" },
         {
@@ -324,6 +325,7 @@ const LEAD_QUALIFY: WorkflowTemplate = {
           required: true,
           label: "What did they send?",
           placeholder: "Hi — we're a 40-person agency and budget is approved…",
+          multiline: true,
         },
         {
           name: "idealCustomer",
@@ -331,6 +333,7 @@ const LEAD_QUALIFY: WorkflowTemplate = {
           required: true,
           label: "Who do you want to work with?",
           description: "One sentence is enough.",
+          multiline: true,
           placeholder: "Software teams of 10-200 who already pay for tools",
         },
         {
