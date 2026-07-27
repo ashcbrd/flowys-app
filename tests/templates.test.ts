@@ -136,6 +136,72 @@ describe("every template is structurally sound", () => {
   );
 
   it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+    "%s lays out with no two steps on top of each other",
+    (_id, template) => {
+      // These graphs are wide enough that a duplicated position hides a step
+      // completely on the canvas.
+      const seen = new Map<string, string>();
+
+      for (const node of template.workflow.nodes) {
+        const key = `${node.position.x},${node.position.y}`;
+        const clash = seen.get(key);
+        expect(
+          clash,
+          `"${node.data.label}" sits on top of "${clash}" at ${key}`
+        ).toBeUndefined();
+        seen.set(key, node.data.label);
+      }
+    }
+  );
+
+  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+    "%s reaches its result from the question it asks",
+    (_id, template) => {
+      // A step with no path to the output never contributes anything, and a
+      // result with no path from the input can't use the user's answers.
+      const forward = new Map<string, string[]>();
+      for (const edge of template.workflow.edges) {
+        forward.set(edge.source, [...(forward.get(edge.source) || []), edge.target]);
+      }
+
+      const start = template.workflow.nodes.find((n) => n.type === "input");
+      expect(start, "template has no question step").toBeDefined();
+
+      const reached = new Set<string>([start!.id]);
+      const queue = [start!.id];
+      while (queue.length) {
+        for (const next of forward.get(queue.shift()!) || []) {
+          if (!reached.has(next)) {
+            reached.add(next);
+            queue.push(next);
+          }
+        }
+      }
+
+      for (const node of template.workflow.nodes) {
+        expect(
+          reached.has(node.id),
+          `"${node.data.label}" is not reachable from the question step`
+        ).toBe(true);
+      }
+    }
+  );
+
+  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+    "%s is a substantial automation, not a demo",
+    (_id, template) => {
+      // The whole point of these is to show what the product can do.
+      expect(template.workflow.nodes.length).toBeGreaterThanOrEqual(10);
+      expect(template.workflow.nodes.length).toBeLessThanOrEqual(20);
+
+      // And the stated size must match reality.
+      const claimed = template.description.match(/^(\d+) steps\./);
+      expect(claimed, "description should open with the step count").not.toBeNull();
+      expect(Number(claimed![1])).toBe(template.workflow.nodes.length);
+    }
+  );
+
+  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
     "%s only references values its own inputs actually carry",
     (_id, template) => {
       // The engine hands a step the merged output of its DIRECT predecessors
@@ -152,11 +218,21 @@ describe("every template is structurally sound", () => {
           const schema = config.outputSchema as AiConfig["outputSchema"];
           return Object.keys(schema?.properties || {});
         }
-        if (node.type === "logic" && config.operation === "condition") {
-          return ["result", "branch", "data"];
-        }
         if (node.type === "logic") {
-          return ["data", "count"];
+          switch (config.operation) {
+            case "condition":
+              return ["result", "branch", "data"];
+            case "transform":
+            case "map":
+              // Both build their output from `mappings`, so the keys are the
+              // names the step actually emits.
+              return Object.keys((config.mappings as Record<string, string>) || {});
+            case "reduce":
+              return ["result"];
+            default:
+              // filter / sort / slice hand on the list plus its size.
+              return ["data", "count"];
+          }
         }
         return [];
       };
