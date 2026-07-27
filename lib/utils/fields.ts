@@ -13,6 +13,7 @@
 import type { Edge } from "@xyflow/react";
 import type { WorkflowNode } from "@/store/workflow";
 import { humanizeFieldName } from "@/lib/vocabulary";
+import { extractTokens } from "@/lib/utils/template";
 
 export interface AvailableField {
   /** The path written into the template token, e.g. `customerEmail`. */
@@ -223,4 +224,56 @@ export function itemFieldsFor(
     path: `item.${f.path}`,
     source: "Each item in the list",
   }));
+}
+
+/**
+ * Steps whose config refers to a value nothing upstream produces.
+ *
+ * The assistant writes both the steps and the report that quotes them, and it
+ * does not always use the same names in both. When it does not, the report comes
+ * out with a heading and nothing under it, which is how "{{themes}}" ended up
+ * printed in a finished result.
+ *
+ * The question asked here is exactly the one the editor's field picker asks, so
+ * the three views of a workflow agree: the picker, this check, and the engine.
+ */
+export function unresolvedReferences(
+  nodes: unknown[],
+  edges: unknown[]
+): { id: string; label: string; missing: string[]; available: string[] }[] {
+  const typed = nodes as WorkflowNode[];
+  const problems: {
+    id: string;
+    label: string;
+    missing: string[];
+    available: string[];
+  }[] = [];
+
+  for (const node of typed) {
+    const tokens = new Set(
+      extractTokens(JSON.stringify(node?.data?.config ?? {}))
+    );
+    if (tokens.size === 0) continue;
+
+    const available = availableFieldsFor(node.id, typed, edges as Edge[]).map(
+      (f) => f.path
+    );
+    const availableSet = new Set(available);
+
+    // A nested path resolves through its root, so compare on the root name.
+    const missing = [...tokens].filter(
+      (token) => !availableSet.has(token.split(".")[0])
+    );
+
+    if (missing.length > 0) {
+      problems.push({
+        id: node.id,
+        label: node.data?.label || node.id,
+        missing,
+        available,
+      });
+    }
+  }
+
+  return problems;
 }
