@@ -259,6 +259,7 @@ interface InputField {
   label?: string;
   description?: string;
   placeholder?: string;
+  multiline?: boolean;
 }
 
 /** camelCase identifier from a human label. */
@@ -423,6 +424,19 @@ function InputNodeConfig({ config, onChange }: ConfigProps) {
                 Must be answered before running
               </Label>
             </div>
+
+            {(field.type === "string" || !field.type) && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={`multiline-${i}`}
+                  checked={field.multiline ?? false}
+                  onCheckedChange={(checked) => updateField(i, { multiline: checked })}
+                />
+                <Label htmlFor={`multiline-${i}`} className="text-xs">
+                  Expects more than a line
+                </Label>
+              </div>
+            )}
 
             <p className="text-[11px] text-muted-foreground">
               Saved as{" "}

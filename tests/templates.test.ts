@@ -136,6 +136,46 @@ describe("every template is structurally sound", () => {
   );
 
   it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+    "%s marks every field that expects a paragraph",
+    (_id, template) => {
+      // A field asking for an email or a pile of notes rendered as a one-line
+      // box is unusable — you cannot read back what you pasted.
+      const inputNode = template.workflow.nodes.find((n) => n.type === "input");
+      const fields =
+        (inputNode?.data.config?.fields as
+          | {
+              name: string;
+              type?: string;
+              multiline?: boolean;
+              label?: string;
+              description?: string;
+              placeholder?: string;
+            }[]
+          | undefined) || [];
+
+      for (const field of fields) {
+        if (field.type !== "string" && field.type !== undefined) continue;
+
+        const wording = [field.label, field.description, field.placeholder]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        const asksForProse = /paste|everything|transcript|whole thing|what did they send/.test(
+          wording
+        );
+
+        if (asksForProse) {
+          expect(
+            field.multiline,
+            `"${field.label ?? field.name}" asks for prose but isn't marked as multi-line`
+          ).toBe(true);
+        }
+      }
+    }
+  );
+
+  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
     "%s lays out with no two steps on top of each other",
     (_id, template) => {
       // These graphs are wide enough that a duplicated position hides a step
