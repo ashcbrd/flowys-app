@@ -28,6 +28,9 @@ const ANSWERS: Record<string, string> = {
   transcript:
     "Sam: right, decision time on the export rewrite. Priya: I think we ship the queue-based version, the sync one keeps timing out. Sam: agreed, let's commit to the queue. Alex: who owns the migration? Sam: Priya, can you take it? Priya: yes, I'll have a plan by Thursday. Alex: what about the pricing question from last week? Sam: park it, we'll come back after the export work. Priya: one worry — if the queue backs up we have no alerting at all. Alex: nobody has picked up the alerting piece. Sam: leave it for now, note it. Alex: also we still need to decide the retention window. Sam: next meeting.",
   attendees: "Sam, Priya, Alex",
+  owner: "vercel",
+  repo: "next.js",
+  topic: "workflow automation",
   meetingName: "Export rewrite review",
   reviews: [
     "Love the new dashboard, much faster than before.",
@@ -48,7 +51,16 @@ function answersFor(template: (typeof TEMPLATES)[number]) {
 
   const input: Record<string, unknown> = {};
   for (const field of fields) {
-    input[field.name] = ANSWERS[field.name] ?? `sample ${field.name}`;
+    // A missing answer used to fall back to "sample <name>", which for a field
+    // feeding a URL produced a puzzling 404 from the service rather than a clear
+    // test failure. Fail loudly at the source instead.
+    const answer = ANSWERS[field.name];
+    if (answer === undefined) {
+      throw new Error(
+        `No live-test answer for the "${field.name}" field. Add one to ANSWERS.`
+      );
+    }
+    input[field.name] = answer;
   }
   return input;
 }
@@ -65,6 +77,25 @@ describe("shipped templates against a real model", () => {
       const result = await executor.execute(answersFor(template));
 
       if (!result.success) {
+        // GitHub allows 60 unauthenticated calls an hour per address. Running this
+        // suite repeatedly exhausts that, which is a quota fact rather than a
+        // broken template — say so instead of reporting a false failure.
+        const rateLimited =
+          /\b(403|429)\b|rate limit/i.test(result.error ?? "") &&
+          template.workflow.nodes.some(
+            (n) =>
+              n.type === "api" &&
+              String((n.data.config as { url?: string }).url ?? "").includes("api.github.com")
+          );
+
+        if (rateLimited) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `SKIPPED ${template.id}: GitHub rate limit reached, not a template fault.`
+          );
+          return;
+        }
+
         throw new Error(
           `${result.error}\n  diagnosis: ${result.errorAnalysis?.possibleCauses?.join("; ")}`
         );
