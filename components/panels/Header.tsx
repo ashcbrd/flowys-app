@@ -35,6 +35,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -97,6 +98,7 @@ export function Header() {
   const [runValues, setRunValues] = useState<RunValues>({});
   const [runErrors, setRunErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -372,13 +374,15 @@ export function Header() {
             </Button>
           </div>
 
-          {/* Clear Canvas */}
+          {/* Clear Canvas. Asks first, because it takes every step off the
+              canvas at once and there is no way to tell from the icon. */}
           <Button
             variant="outline"
             size="icon"
             className="h-8 w-8"
-            onClick={clearCanvas}
-            title="Clear Canvas"
+            onClick={() => setClearConfirmOpen(true)}
+            disabled={nodes.length === 0}
+            title="Clear the canvas"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -600,6 +604,39 @@ export function Header() {
             <Button onClick={handleRun} disabled={isExecuting} className="gap-2">
               <Play className="h-4 w-4" />
               {isExecuting ? "Running..." : "Run workflow"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Canvas Confirmation */}
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clear the canvas?</DialogTitle>
+            <DialogDescription>
+              This takes {nodes.length === 1 ? "the one step" : `all ${nodes.length} steps`} off
+              the canvas. Your saved workflows are untouched, and you can undo
+              this straight afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearConfirmOpen(false)}>
+              Keep them
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearCanvas();
+                setClearConfirmOpen(false);
+                toast({
+                  title: "Canvas cleared",
+                  description: "Undo brings your steps back.",
+                });
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Clear the canvas
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -147,7 +147,9 @@ export function ExecutionDrawer() {
             ) : (
               <Play className="h-5 w-5 text-muted-foreground" />
             )}
-            <h2 className="font-semibold text-lg">Execution</h2>
+            <h2 className="font-semibold text-lg">
+              {isExecuting ? "Running" : "Execution"}
+            </h2>
           </div>
           <Button
             variant="ghost"
@@ -160,12 +162,13 @@ export function ExecutionDrawer() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto h-[calc(100%-65px)]">
-          {isExecuting && (
-            <div className="p-4 flex items-center gap-3 bg-blue-50 dark:bg-blue-950/30 border-b">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                Executing workflow...
-              </span>
+          {/* The header spinner already says a run is in progress, and each step
+              spins while it works. A banner here was a third copy of the same
+              news. Only the moment before the first step reports needs its own
+              line, otherwise the panel would look empty. */}
+          {isExecuting && executionLogs.length === 0 && (
+            <div className="p-4 text-sm text-muted-foreground border-b">
+              Starting the first step
             </div>
           )}
 

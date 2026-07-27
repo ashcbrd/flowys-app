@@ -55,12 +55,57 @@ NODE TYPES (use exactly these type values):
 WORKFLOW CREATION:
 When a user asks to CREATE a workflow, you MUST generate a complete workflow with:
 1. Unique node IDs (use format: node_1, node_2, etc.)
-2. Proper positions (start at x:100, increment by 300 for each node horizontally)
-3. All y positions at 200 for a horizontal layout
-4. Complete configurations for each node
-5. Edges connecting the nodes in sequence
+2. Complete configurations for every node
+3. Edges connecting the nodes
 
-For AI nodes, ALWAYS include a complete outputSchema with type, properties, and required fields.
+HOW BIG (this is not optional):
+Every workflow you create has AT LEAST 10 nodes. A three-node
+input-then-ai-then-output workflow is not an acceptable answer to any request,
+however simple the request sounds. One AI step that does everything is a worse
+answer than six that each do one thing, because the person can read, edit and
+trust each step on its own.
+
+Reach 10+ by breaking the job into the questions a person would actually ask:
+- ONE "input" node collecting everything needed up front
+- FOUR OR MORE "ai" nodes, each asking ONE focused question about the same
+  material, wired in PARALLEL from the input rather than in a chain. For a pile
+  of reviews that is: the themes, the quiet signals, what it is costing, what to
+  fix first, how to say it to the team.
+- AT LEAST ONE "logic" node with operation "condition" testing a number the AI
+  returned (for example "negativeCount > 3"), so the workflow reacts to what it
+  found
+- "logic" nodes with operation "transform" to rename a value for the step that
+  needs it, and "map" or "reduce" where a list needs per-item work or totalling
+- ONE final "ai" node that writes the thing the person actually wanted, fed by
+  the earlier findings
+- ONE "output" node with format "markdown" and a template that lays the whole
+  result out under headings
+- an "api" node where public data would genuinely help (api.github.com and
+  hn.algolia.com need no key), and a "webhook" node when the result should be
+  sent on
+
+LAYOUT:
+Lay the nodes out in columns, not one long row. x = 100 + 320 * column, and
+y = 120 + 150 * row within that column. Parallel steps share a column and stack
+down it. The input is the only node in column 0; the output is alone in the last.
+
+DATA FLOW (get this wrong and the workflow fails at run time):
+A step receives ONLY the merged output of the steps wired DIRECTLY into it. It
+cannot see values from further back in the workflow. So if the output node needs
+a value, the step producing it must be wired straight to the output node. It is
+normal and correct for eight steps to all point at the output node.
+
+{{name}} in any config refers to a key from a direct predecessor's output:
+- an "ai" node produces exactly the properties named in its outputSchema
+- a "logic" transform produces the keys named in its mappings
+- a "logic" condition produces { result, branch, data }
+- a "logic" map produces { data, count }, and per-item keys live inside data
+- an "input" node produces its field names
+
+For AI nodes, ALWAYS include a complete outputSchema with type, properties, and
+required fields. Give every property a description. An array property MUST also
+declare items, for example { "type": "array", "items": { "type": "string" } };
+an array without items is rejected before the model is called.
 
 RESPONSE FORMAT (ALWAYS VALID JSON):
 {
@@ -103,6 +148,7 @@ Never imply the connection already works, and never invent an integration node.
 `}
 IMPORTANT:
 - Only include "workflowGeneration" when user asks to CREATE/BUILD/MAKE a workflow
+- A workflowGeneration with fewer than 10 nodes is incomplete. Count them before answering.
 - Only include "errorAnalysis" when there's an actual error
 - Only include "suggestedFix" when suggesting a fix for an error
 - For outputSchema in AI nodes, always include type:"object", properties with descriptions, and required array
@@ -123,6 +169,80 @@ function normalizeAiModels(nodes: unknown[]): unknown[] {
     const { provider: _p, model: _m, ...rest } = n.data.config;
     return { ...n, data: { ...n.data, config: rest } };
   });
+}
+
+/**
+ * A workflow worth putting on someone's canvas is more than three steps.
+ *
+ * The prompt asks for at least ten and says why, but a short request ("summarise
+ * this") still tempts a short answer. Rather than hand over something the person
+ * will immediately outgrow, ask once for the same workflow broken down properly.
+ * One extra call, only when the first answer came back thin.
+ */
+const MIN_GENERATED_NODES = 10;
+
+/**
+ * The assistant's answer, as loosely as it actually arrives. Every field is
+ * checked at the point of use rather than trusted here.
+ */
+interface FluxAnswer {
+  message?: string;
+  suggestions?: unknown;
+  workflowGeneration?: {
+    description?: string;
+    nodes?: unknown[];
+    edges?: unknown[];
+  };
+  errorAnalysis?: Record<string, unknown> & { hasError?: boolean };
+  suggestedFix?: Record<string, unknown> & {
+    explanation?: string;
+    manualSteps?: unknown;
+    autoFix?: Record<string, unknown> & { type?: string; description?: string };
+  };
+}
+
+async function ensureWorkflowDepth(
+  parsedContent: FluxAnswer,
+  messages: OpenAI.ChatCompletionMessageParam[],
+  rawAnswer: string
+): Promise<FluxAnswer> {
+  const nodeCount = parsedContent?.workflowGeneration?.nodes?.length ?? 0;
+
+  if (nodeCount === 0 || nodeCount >= MIN_GENERATED_NODES) return parsedContent;
+
+  try {
+    const retry = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        ...messages,
+        { role: "assistant", content: rawAnswer },
+        {
+          role: "user",
+          content:
+            `That workflow has only ${nodeCount} steps. Rebuild the same workflow ` +
+            `with at least ${MIN_GENERATED_NODES}, by splitting the reading work into ` +
+            "separate AI steps that each answer one question in parallel, adding a " +
+            "condition on a number one of them returns, naming values with transform " +
+            "steps, and finishing with a step that writes the result. Keep the same " +
+            "goal and the same input fields. Reply with the full JSON again.",
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 8000,
+      response_format: { type: "json_object" },
+    });
+
+    const expanded: FluxAnswer = JSON.parse(
+      retry.choices[0]?.message?.content || "{}"
+    );
+    const expandedCount = expanded?.workflowGeneration?.nodes?.length ?? 0;
+
+    // Only take the second answer if it is actually the fuller one.
+    return expandedCount > nodeCount ? expanded : parsedContent;
+  } catch {
+    // A failed expansion is not a failed conversation, keep the first answer.
+    return parsedContent;
+  }
 }
 
 export async function GET() {
@@ -220,7 +340,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o",
       messages,
       temperature: 0.7,
-      max_tokens: 3000,
+      max_tokens: 8000,
       response_format: { type: "json_object" },
     });
 
@@ -230,7 +350,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const parsedContent = JSON.parse(content);
+      const parsedContent = await ensureWorkflowDepth(
+        JSON.parse(content),
+        messages,
+        content
+      );
 
       const result: Record<string, unknown> = {
         message: parsedContent.message || "I'm not sure how to help with that.",
