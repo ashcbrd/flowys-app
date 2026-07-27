@@ -17,25 +17,29 @@ import type { InputField } from "@/lib/nodes/types";
 
 /** Realistic answers for whatever a template asks for. */
 const ANSWERS: Record<string, string> = {
-  feedback:
-    "The CSV export has been failing since Tuesday. I emailed support twice and heard nothing. We rely on this for month-end reporting.",
-  customerName: "Sam at Northwind",
+  emailText:
+    "Subject: still broken\n\nHi — since Tuesday the CSV export fails every time on our reporting workspace. I have emailed twice and heard nothing. We need this for month-end on Friday and right now we are copying rows by hand. This is the third time this quarter.\n\nPriya\nOps Lead, Acme",
+  customerName: "Priya at Acme",
+  plan: "Pro",
+  enquiry:
+    "Hi — we're a 40-person agency, budget is approved for this quarter, and we'd like to roll this out to two teams next month. I run ops so I can sign off. Can we start a trial?",
+  idealCustomer: "Software and agency teams of 10-200 who already pay for tools",
+  yourOffer: "Workflow automation, from £99/month",
+  transcript:
+    "Sam: right, decision time on the export rewrite. Priya: I think we ship the queue-based version, the sync one keeps timing out. Sam: agreed, let's commit to the queue. Alex: who owns the migration? Sam: Priya, can you take it? Priya: yes, I'll have a plan by Thursday. Alex: what about the pricing question from last week? Sam: park it, we'll come back after the export work. Priya: one worry — if the queue backs up we have no alerting at all. Alex: nobody has picked up the alerting piece. Sam: leave it for now, note it. Alex: also we still need to decide the retention window. Sam: next meeting.",
+  attendees: "Sam, Priya, Alex",
+  meetingName: "Export rewrite review",
   reviews: [
     "Love the new dashboard, much faster than before.",
     "Export keeps timing out on large files. Frustrating.",
     "Support replied in ten minutes, genuinely impressed.",
     "Mobile app is unusable on small screens.",
     "Pricing feels steep for a team of three.",
-    "Export broke again today.",
+    "Export broke again today, second time this week.",
+    "The onboarding was clear and quick.",
+    "Wish it integrated with our ticketing tool.",
   ].join("\n"),
-  enquiry:
-    "Hi — we're a 40-person agency, budget approved, and want to roll this out to two teams next month. Can we start a trial?",
-  idealCustomer: "Software and agency teams of 10-200 who already pay for tools",
-  email:
-    "Subject: urgent\n\nHi there,\n\nSince the update this morning nobody on my team can log in — we just get a spinner. We have a client demo at 4pm. Please help.\n\nThanks,\nPriya\nOps Lead, Acme",
-  notes:
-    "Three people asked for Slack notifications. Export timeouts reported twice more. One churn risk mentioned pricing. Support response times praised by two customers.",
-  weekOf: "3 March",
+  productName: "the app",
 };
 
 function answersFor(template: (typeof TEMPLATES)[number]) {
