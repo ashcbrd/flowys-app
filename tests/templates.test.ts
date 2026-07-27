@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { TEMPLATES } from "@/lib/templates";
 
 /**
@@ -19,6 +19,77 @@ vi.mock("@/lib/providers", () => ({
 }));
 
 const { createExecutor } = await import("@/lib/engine/executor");
+
+/**
+ * Templates now include API and webhook steps, which would make this suite hit
+ * the network. Stubbing fetch keeps `npm test` offline and fast; the live suite
+ * exercises the real services.
+ */
+const originalFetch = globalThis.fetch;
+
+/** Canned responses shaped like the real services the templates call. */
+function stubFetch(url: string): unknown {
+  if (url.includes("api.github.com") && url.includes("/issues")) {
+    return [
+      { title: "Export times out on large files", comments: 12 },
+      { title: "Docs are out of date", comments: 3 },
+    ];
+  }
+  if (url.includes("api.github.com")) {
+    return {
+      full_name: "acme/widget",
+      description: "A widget library",
+      stargazers_count: 4200,
+      forks_count: 310,
+      open_issues_count: 87,
+      language: "TypeScript",
+      html_url: "https://github.com/acme/widget",
+      pushed_at: "2026-07-20T10:00:00Z",
+    };
+  }
+  if (url.includes("geocoding-api.open-meteo.com")) {
+    return {
+      results: [
+        { name: "Manila", latitude: 14.6, longitude: 120.98, country: "Philippines" },
+      ],
+    };
+  }
+  if (url.includes("api.open-meteo.com")) {
+    return {
+      daily: {
+        temperature_2m_max: [31.4],
+        temperature_2m_min: [24.1],
+        precipitation_probability_max: [55],
+        wind_speed_10m_max: [18.2],
+      },
+    };
+  }
+  if (url.includes("hn.algolia.com")) {
+    return {
+      nbHits: 842,
+      hits: [
+        { title: "Show HN: a workflow tool", points: 210, num_comments: 88 },
+        { title: "Automation is mostly plumbing", points: 140, num_comments: 51 },
+      ],
+    };
+  }
+  // The webhook receiver.
+  return { ok: true };
+}
+
+beforeEach(() => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    return new Response(JSON.stringify(stubFetch(url)), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+});
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 interface AiConfig {
   outputSchema?: {
@@ -258,15 +329,22 @@ describe("every template is structurally sound", () => {
           const schema = config.outputSchema as AiConfig["outputSchema"];
           return Object.keys(schema?.properties || {});
         }
+        if (node.type === "api") {
+          const mapping = config.responseMapping as Record<string, string> | undefined;
+          // With no mapping, a list response is handed on as data + count.
+          return mapping ? Object.keys(mapping) : ["data", "count"];
+        }
         if (node.type === "logic") {
           switch (config.operation) {
             case "condition":
               return ["result", "branch", "data"];
             case "transform":
-            case "map":
-              // Both build their output from `mappings`, so the keys are the
-              // names the step actually emits.
+              // Builds its output from `mappings`, so the keys are what it emits.
               return Object.keys((config.mappings as Record<string, string>) || {});
+            case "map":
+              // Also driven by `mappings`, but those name fields INSIDE each item.
+              // The step itself hands on the reshaped list as `data`.
+              return ["data", "count"];
             case "reduce":
               return ["result"];
             default:

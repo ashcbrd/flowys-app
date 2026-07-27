@@ -1,6 +1,6 @@
 import type { NodeHandler, NodeContext, NodeResult, WebhookNodeConfig } from "./types";
 import { generateWebhookSignature } from "@/lib/middleware/apiAuth";
-import { interpolateVariables, getNestedValue } from "@/lib/utils/template";
+import { interpolateVariables, interpolateDeep, getNestedValue } from "@/lib/utils/template";
 
 export class WebhookNodeHandler implements NodeHandler {
   type = "webhook" as const;
@@ -31,19 +31,14 @@ export class WebhookNodeHandler implements NodeHandler {
       let payload: Record<string, unknown>;
 
       if (config.payloadTemplate) {
-        // Use custom template
-        const templateString = interpolateVariables(
-          JSON.stringify(config.payloadTemplate),
-          { ...context.inputs, ...context.globalContext }
-        );
-        try {
-          payload = JSON.parse(templateString);
-        } catch {
-          return {
-            success: false,
-            error: "Invalid payload template - could not parse as JSON",
-          };
-        }
+        // Substitute into the parsed structure, not into JSON text. Interpolating
+        // a stringified template and re-parsing it breaks the moment a value
+        // contains a newline or a quote — which any multi-line result does — and
+        // failed with a message about the template rather than the real cause.
+        payload = interpolateDeep(config.payloadTemplate, {
+          ...context.inputs,
+          ...context.globalContext,
+        }) as Record<string, unknown>;
       } else {
         // Default: send all inputs as payload
         payload = {
@@ -154,20 +149,35 @@ export class WebhookNodeHandler implements NodeHandler {
       } catch (error) {
         clearTimeout(timeoutId);
 
-        if (error instanceof Error && error.name === "AbortError") {
+        const timedOut = error instanceof Error && error.name === "AbortError";
+        const reason = timedOut
+          ? `Webhook request timed out after ${timeout}ms`
+          : `Could not reach ${url.toString()}`;
+
+        // `continueOnError` used to apply only to HTTP error responses, so a
+        // receiver that was slow or unreachable still failed the whole run —
+        // throwing away results the earlier steps had already produced. Those are
+        // the cases it most needs to cover.
+        if (config.continueOnError) {
           return {
-            success: false,
-            error: `Webhook request timed out after ${timeout}ms`,
+            success: true,
+            output: { success: false, error: reason, url: url.toString() },
           };
         }
 
-        throw error;
+        return { success: false, error: reason };
       }
     } catch (error) {
-      return {
-        success: false,
-        error: `Webhook error: ${error instanceof Error ? error.message : String(error)}`,
-      };
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (config.continueOnError) {
+        return {
+          success: true,
+          output: { success: false, error: `Webhook error: ${message}` },
+        };
+      }
+
+      return { success: false, error: `Webhook error: ${message}` };
     }
   }
 
