@@ -84,6 +84,7 @@ interface WorkflowState {
   executeWorkflow: (input?: Record<string, unknown>) => Promise<void>;
   clearCanvas: () => void;
   newWorkflow: () => void;
+  forgetWorkflows: (ids: string[]) => void;
   createWorkflow: (workflow: GeneratedWorkflow) => void;
   hydrateFromStorage: () => Promise<void>;
   saveDraft: () => void;
@@ -708,6 +709,34 @@ export const useWorkflowStore = create<WorkflowState>()(
         });
       },
 
+      /**
+       * Forget workflows that no longer exist on the server.
+       *
+       * Deleting the workflow you happen to have open used to leave its steps on
+       * the canvas, still labelled "saved", still pointing at a document that had
+       * been deleted. The stored draft went with it, otherwise the next reload
+       * restored whatever unrelated steps had been drafted before the workflow
+       * was ever saved.
+       */
+      forgetWorkflows: (ids: string[]) => {
+        const { currentWorkflowId } = get();
+        if (!currentWorkflowId || !ids.includes(currentWorkflowId)) return;
+
+        set({
+          nodes: [],
+          edges: [],
+          selectedNode: null,
+          workflow: null,
+          currentWorkflowId: null,
+          workflowStatus: "draft",
+          executionLogs: [],
+          lastExecution: null,
+          history: [],
+          historyIndex: -1,
+          draftWorkflow: null,
+        });
+      },
+
       createWorkflow: (workflow: GeneratedWorkflow) => {
         const newNodes: WorkflowNode[] = workflow.nodes.map((node) => ({
           id: node.id,
@@ -795,15 +824,16 @@ export const useWorkflowStore = create<WorkflowState>()(
               workflowStatus: "saved",
             });
           } catch {
-            // Workflow might have been deleted, try loading draft
-            set({ currentWorkflowId: null });
-            if (draftWorkflow && draftWorkflow.nodes.length > 0) {
-              set({
-                nodes: draftWorkflow.nodes,
-                edges: draftWorkflow.edges,
-                workflowStatus: "draft",
-              });
-            }
+            // The workflow is gone. Restoring an unrelated draft here is how a
+            // single stale step kept reappearing after a delete, so start clean.
+            set({
+              currentWorkflowId: null,
+              workflow: null,
+              nodes: [],
+              edges: [],
+              workflowStatus: "draft",
+              draftWorkflow: null,
+            });
           }
         } else if (draftWorkflow && draftWorkflow.nodes.length > 0) {
           // No saved workflow, load draft if exists

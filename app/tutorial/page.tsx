@@ -458,7 +458,9 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         connect them, and run your first AI workflow. Ready?
       </p>
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-8 text-sm text-muted-foreground">
+        {/* Three steps and two arrows do not fit across a phone, so let them
+            wrap and centre rather than pushing the page sideways. */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-sm text-muted-foreground sm:gap-8">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
               <FileInput className="h-4 w-4" />

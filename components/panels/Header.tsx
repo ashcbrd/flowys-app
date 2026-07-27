@@ -285,16 +285,16 @@ export function Header() {
 
   return (
     <>
-      <header className="h-14 border-b bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 z-50">
+      <header className="h-14 border-b bg-background/80 backdrop-blur-sm flex items-center justify-between gap-2 px-3 sm:px-4 z-50">
         {/* Left: Logo + Workflow Name */}
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--fy-blue)] to-[var(--fy-blue-deep)] flex items-center justify-center shadow-md">
               <span className="text-white font-bold text-sm">F</span>
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {isEditingName ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -303,7 +303,7 @@ export function Header() {
                   onChange={(e) => setEditedName(e.target.value)}
                   onBlur={handleSaveName}
                   onKeyDown={handleKeyDown}
-                  className="h-8 w-48 text-sm"
+                  className="h-8 w-36 text-sm sm:w-48"
                   disabled={isSaving}
                 />
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -316,11 +316,15 @@ export function Header() {
                   "hover:bg-muted transition-colors group"
                 )}
               >
-                <span>{workflowName}</span>
+                <span className="max-w-[38vw] truncate sm:max-w-none">
+                  {workflowName}
+                </span>
                 <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}
-            {getStatusIndicator(workflowStatus)}
+            <span className="hidden sm:inline-flex">
+              {getStatusIndicator(workflowStatus)}
+            </span>
           </div>
         </div>
 
@@ -342,7 +346,7 @@ export function Header() {
               variant="outline"
               size="sm"
               onClick={beautifyLayout}
-              className="gap-1.5 h-8"
+              className="gap-1.5 h-8 hidden lg:flex"
               title="Auto-arrange nodes"
             >
               <Wand2 className="h-3.5 w-3.5" />
@@ -351,7 +355,7 @@ export function Header() {
           )}
 
           {/* Undo/Redo */}
-          <div className="flex items-center border rounded-lg p-0.5 bg-muted/30">
+          <div className="hidden sm:flex items-center border rounded-lg p-0.5 bg-muted/30">
             <Button
               variant="ghost"
               size="icon"
@@ -379,7 +383,7 @@ export function Header() {
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 hidden sm:inline-flex"
             onClick={() => setClearConfirmOpen(true)}
             disabled={nodes.length === 0}
             title="Clear the canvas"
@@ -391,7 +395,7 @@ export function Header() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 h-8"
+            className="gap-1.5 h-8 hidden sm:flex"
             onClick={handleQuickSave}
             disabled={isSaving}
             title="Save Workflow"
@@ -419,7 +423,9 @@ export function Header() {
           </Button>
 
           {/* Theme Toggle */}
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
 
           {/* User Menu */}
           {session?.user && (
@@ -449,6 +455,48 @@ export function Header() {
                 </div>
 
                 <DropdownMenuSeparator />
+
+                {/* On a phone the header keeps only the workflow name and Run,
+                    so the controls it drops are listed here instead. */}
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground sm:hidden">
+                  This workflow
+                </div>
+                <DropdownMenuItem className="sm:hidden" onClick={handleQuickSave}>
+                  <Save className="h-4 w-4" />
+                  Save
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="sm:hidden"
+                  onClick={undo}
+                  disabled={!canUndo()}
+                >
+                  <Undo2 className="h-4 w-4" />
+                  Undo
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="sm:hidden"
+                  onClick={redo}
+                  disabled={!canRedo()}
+                >
+                  <Redo2 className="h-4 w-4" />
+                  Redo
+                </DropdownMenuItem>
+                {hasConnectedNodes() && (
+                  <DropdownMenuItem className="lg:hidden" onClick={beautifyLayout}>
+                    <Wand2 className="h-4 w-4" />
+                    Tidy the layout
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="sm:hidden"
+                  onClick={() => setClearConfirmOpen(true)}
+                  disabled={nodes.length === 0}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear the canvas
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="sm:hidden" />
 
                 {/* Workflow section */}
                 <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
