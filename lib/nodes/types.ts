@@ -30,6 +30,11 @@ export interface InputField {
   description?: string;
   /** Example text inside the empty field. */
   placeholder?: string;
+  /**
+   * Expects more than a line — an email, a transcript, a pile of notes.
+   * Renders a box that grows instead of a single-line field you can't read back.
+   */
+  multiline?: boolean;
 }
 
 export interface InputNodeConfig {

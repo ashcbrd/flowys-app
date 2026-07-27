@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -193,15 +194,37 @@ export function RunForm({
               />
             )}
 
-            {(field.type === "string" || !field.type) && (
-              <Input
-                id={id}
-                value={value === undefined || value === null ? "" : String(value)}
-                placeholder={field.placeholder}
-                onChange={(e) => set(field.name, e.target.value)}
-                aria-invalid={Boolean(error)}
-              />
-            )}
+            {(field.type === "string" || !field.type) &&
+              (() => {
+                const text =
+                  value === undefined || value === null ? "" : String(value);
+
+                // Honour the declared intent, but also switch as soon as the
+                // content itself is clearly more than a line — otherwise pasting
+                // an email into a field nobody marked leaves it unreadable.
+                const long =
+                  field.multiline || text.includes("\n") || text.length > 120;
+
+                return long ? (
+                  <Textarea
+                    id={id}
+                    value={text}
+                    placeholder={field.placeholder}
+                    onChange={(e) => set(field.name, e.target.value)}
+                    aria-invalid={Boolean(error)}
+                    rows={Math.min(14, Math.max(4, text.split("\n").length + 1))}
+                    className="resize-y"
+                  />
+                ) : (
+                  <Input
+                    id={id}
+                    value={text}
+                    placeholder={field.placeholder}
+                    onChange={(e) => set(field.name, e.target.value)}
+                    aria-invalid={Boolean(error)}
+                  />
+                );
+              })()}
 
             {error && (
               <p className="text-xs text-destructive" role="alert">
