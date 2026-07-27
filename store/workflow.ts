@@ -237,6 +237,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             historyIndex: historyIndex - 1,
             selectedNode: null,
           });
+          get().saveDraft();
         }
       },
 
@@ -253,6 +254,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             historyIndex: historyIndex + 1,
             selectedNode: null,
           });
+          get().saveDraft();
         }
       },
 
@@ -691,6 +693,7 @@ export const useWorkflowStore = create<WorkflowState>()(
           executionLogs: [],
           lastExecution: null,
         });
+        get().saveDraft();
       },
 
       newWorkflow: () => {
@@ -767,16 +770,26 @@ export const useWorkflowStore = create<WorkflowState>()(
 
       saveDraft: () => {
         const { nodes, edges, workflow } = get();
-        // Only save draft if there are nodes and it's not a saved workflow
-        if (nodes.length > 0 && !workflow) {
-          set({
-            draftWorkflow: {
-              nodes: JSON.parse(JSON.stringify(nodes)),
-              edges: JSON.parse(JSON.stringify(edges)),
-              lastModified: new Date().toISOString(),
-            },
-          });
+
+        // A saved workflow lives on the server; drafts exist only to carry an
+        // unsaved canvas across a reload.
+        if (workflow) return;
+
+        // This has to clear as well as write. Emptying the canvas used to leave
+        // the previous draft on disk, so the next reload put a deleted step
+        // back and reported it as an unsaved change.
+        if (nodes.length === 0) {
+          set({ draftWorkflow: null });
+          return;
         }
+
+        set({
+          draftWorkflow: {
+            nodes: JSON.parse(JSON.stringify(nodes)),
+            edges: JSON.parse(JSON.stringify(edges)),
+            lastModified: new Date().toISOString(),
+          },
+        });
       },
 
       loadDraft: () => {
