@@ -92,11 +92,29 @@ export function ExecutionPanel() {
                           {log.status === "pending" && (
                             <Clock className="h-4 w-4 text-gray-400" />
                           )}
-                          <span className="font-medium">{log.nodeName}</span>
-                          {log.duration && (
-                            <span className="text-muted-foreground text-xs ml-auto">
+                          <span className="font-medium flex-1">{log.nodeName}</span>
+                          {typeof log.duration === "number" && log.duration > 0 && (
+                            <span className="text-muted-foreground text-xs">
                               {log.duration}ms
                             </span>
+                          )}
+                          {/* Expanding belongs on the card's own header row.
+                              Over the result it collided with the copy button. */}
+                          {log.output && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 shrink-0"
+                              onClick={() =>
+                                setOutputModal({
+                                  nodeName: log.nodeName,
+                                  output: log.output,
+                                })
+                              }
+                              title="Open in a bigger view"
+                            >
+                              <Maximize2 className="h-3 w-3" />
+                            </Button>
                           )}
                         </div>
                         {log.error && (
@@ -109,16 +127,7 @@ export function ExecutionPanel() {
                             <summary className="cursor-pointer text-xs text-muted-foreground">
                               View output
                             </summary>
-                            <div className="mt-2 relative">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-1 top-1 h-6 w-6 p-0"
-                                onClick={() => setOutputModal({ nodeName: log.nodeName, output: log.output })}
-                                title="Expand view"
-                              >
-                                <Maximize2 className="h-3 w-3" />
-                              </Button>
+                            <div className="mt-2">
                               <ResultView value={log.output} className="max-h-[420px] overflow-auto" />
                             </div>
                           </details>
@@ -146,9 +155,25 @@ export function ExecutionPanel() {
                       ) : (
                         <XCircle className="h-4 w-4 text-red-600" />
                       )}
-                      <span className="font-medium capitalize">
+                      <span className="font-medium capitalize flex-1">
                         {lastExecution.status}
                       </span>
+                      {lastExecution.output && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 shrink-0"
+                          onClick={() =>
+                            setOutputModal({
+                              nodeName: "Final result",
+                              output: lastExecution.output,
+                            })
+                          }
+                          title="Open in a bigger view"
+                        >
+                          <Maximize2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                     {lastExecution.error && (
                       <div className="text-red-600 dark:text-red-400 text-xs">
@@ -156,16 +181,7 @@ export function ExecutionPanel() {
                       </div>
                     )}
                     {lastExecution.output && (
-                      <div className="mt-2 relative">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-6 w-6 p-0"
-                          onClick={() => setOutputModal({ nodeName: "Final Result", output: lastExecution.output })}
-                          title="Expand view"
-                        >
-                          <Maximize2 className="h-3 w-3" />
-                        </Button>
+                      <div className="mt-2">
                         <ResultView value={lastExecution.output} className="max-h-[420px] overflow-auto" />
                       </div>
                     )}

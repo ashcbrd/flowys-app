@@ -699,9 +699,11 @@ const MEETING_NOTES: WorkflowTemplate = {
         4,
         2,
         [
-          "# {{summary}}",
+          "# Meeting write-up",
           "",
-          "Decisions made: **{{anyDecisions}}** · actions without an owner: **{{unownedTally}}** ({{hasUnowned}})",
+          "{{summary}}",
+          "",
+          "Decisions: **{{decisionCount}}**. Actions without an owner: **{{unownedTally}}**.",
           "",
           "## Decided",
           "{{decisions}}",

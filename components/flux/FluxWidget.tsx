@@ -331,7 +331,9 @@ export function FluxWidget() {
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
-            "fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 text-white",
+            // fy-flux-launcher lets an open side panel move this out of the way,
+            // it used to sit on top of the last result in the drawer.
+            "fy-flux-launcher fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 text-white",
             "bg-gradient-to-r from-[var(--fy-blue)] to-[var(--fy-blue-deep)] hover:opacity-95 hover:scale-105 active:scale-95"
           )}
         >
