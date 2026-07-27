@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { INTEGRATIONS_ENABLED } from "@/lib/features";
+import { unresolvedReferences } from "@/lib/utils/fields";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -149,6 +150,10 @@ Never imply the connection already works, and never invent an integration node.
 IMPORTANT:
 - Only include "workflowGeneration" when user asks to CREATE/BUILD/MAKE a workflow
 - A workflowGeneration with fewer than 10 nodes is incomplete. Count them before answering.
+- Every {{name}} you write, in a prompt or an output template, must be spelled
+  exactly like a property declared in an upstream step's outputSchema, an input
+  field name, or a transform mapping key. A name you invented for the report but
+  never declared produces a heading with nothing under it.
 - Only include "errorAnalysis" when there's an actual error
 - Only include "suggestedFix" when suggesting a fix for an error
 - For outputSchema in AI nodes, always include type:"object", properties with descriptions, and required array
@@ -241,6 +246,81 @@ async function ensureWorkflowDepth(
     return expandedCount > nodeCount ? expanded : parsedContent;
   } catch {
     // A failed expansion is not a failed conversation, keep the first answer.
+    return parsedContent;
+  }
+}
+
+/**
+ * Ask once for the same workflow with its references pointing at real values.
+ *
+ * Only fires when something is actually broken, and the second answer is only
+ * taken if it is genuinely better, so a failed repair leaves the first answer
+ * alone rather than replacing it with something worse.
+ */
+async function ensureReferencesResolve(
+  parsedContent: FluxAnswer,
+  messages: OpenAI.ChatCompletionMessageParam[],
+  rawAnswer: string
+): Promise<FluxAnswer> {
+  const generation = parsedContent?.workflowGeneration;
+  if (!generation?.nodes?.length) return parsedContent;
+
+  const problems = unresolvedReferences(
+    generation.nodes,
+    generation.edges ?? []
+  );
+  if (problems.length === 0) return parsedContent;
+
+  const report = problems
+    .map(
+      (p) =>
+        `- "${p.label}" (${p.id}) refers to ${p.missing
+          .map((m) => `{{${m}}}`)
+          .join(", ")}, but the only values reaching it are: ${
+          p.available.length ? p.available.join(", ") : "none"
+        }`
+    )
+    .join("\n");
+
+  try {
+    const retry = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        ...messages,
+        { role: "assistant", content: rawAnswer },
+        {
+          role: "user",
+          content:
+            `That workflow refers to values that nothing produces:\n${report}\n\n` +
+            "Fix it by either renaming the reference to a value that does exist, " +
+            "or wiring the step that produces it into the step that needs it, or " +
+            "adding the value to the producing step's outputSchema. Every " +
+            "{{name}} must match a value produced by a step upstream of it. Keep " +
+            "the same goal, the same input fields and at least ten steps. Reply " +
+            "with the full JSON again.",
+        },
+      ],
+      temperature: 0.4,
+      max_tokens: 8000,
+      response_format: { type: "json_object" },
+    });
+
+    const repaired: FluxAnswer = JSON.parse(
+      retry.choices[0]?.message?.content || "{}"
+    );
+    const repairedNodes = repaired?.workflowGeneration?.nodes;
+    if (!repairedNodes?.length) return parsedContent;
+
+    const stillBroken = unresolvedReferences(
+      repairedNodes,
+      repaired.workflowGeneration?.edges ?? []
+    );
+
+    const before = problems.reduce((n, p) => n + p.missing.length, 0);
+    const after = stillBroken.reduce((n, p) => n + p.missing.length, 0);
+
+    return after < before ? repaired : parsedContent;
+  } catch {
     return parsedContent;
   }
 }
@@ -350,8 +430,8 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const parsedContent = await ensureWorkflowDepth(
-        JSON.parse(content),
+      const parsedContent = await ensureReferencesResolve(
+        await ensureWorkflowDepth(JSON.parse(content), messages, content),
         messages,
         content
       );

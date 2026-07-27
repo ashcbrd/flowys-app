@@ -13,7 +13,15 @@
 /** Matches {{name}} and {{nested.path}} */
 export const TEMPLATE_TOKEN_PATTERN = /\{\{(\w+(?:\.\w+)*)\}\}/g;
 
-export type MissingBehavior = "keep" | "empty";
+/**
+ * What to do with `{{name}}` when nothing upstream produced a `name`.
+ *
+ * `keep` leaves the token in place, which is right while someone is still
+ * building and wants to see what they referred to. `empty` removes it, which is
+ * right inside a request body. `note` is for prose a person reads, where a
+ * literal `{{themes}}` in the middle of a report means nothing to them.
+ */
+export type MissingBehavior = "keep" | "empty" | "note";
 
 /**
  * How a list is rendered when substituted into text.
@@ -54,7 +62,9 @@ export function interpolateVariables(
     const value = getNestedValue(inputs, path);
 
     if (value === undefined) {
-      return onMissing === "empty" ? "" : `{{${path}}}`;
+      if (onMissing === "empty") return "";
+      if (onMissing === "note") return "_no value_";
+      return `{{${path}}}`;
     }
 
     if (arrayStyle === "list") {

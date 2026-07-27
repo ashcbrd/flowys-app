@@ -94,23 +94,82 @@ export class WorkflowExecutor {
     return order;
   }
 
+  /**
+   * Every step this one can reach backwards, grouped by how many hops away.
+   *
+   * Index 0 is the direct predecessors, index 1 their predecessors, and so on.
+   * A node is only reported at the shortest distance it was reached from, so a
+   * diamond-shaped graph counts each ancestor once.
+   */
+  private ancestorsByDistance(nodeId: string): string[][] {
+    const incoming = new Map<string, string[]>();
+    for (const edge of this.edges) {
+      const list = incoming.get(edge.target) || [];
+      list.push(edge.source);
+      incoming.set(edge.target, list);
+    }
+
+    const levels: string[][] = [];
+    const seen = new Set<string>([nodeId]);
+    let frontier = (incoming.get(nodeId) || []).filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    while (frontier.length > 0) {
+      levels.push(frontier);
+
+      const next: string[] = [];
+      for (const id of frontier) {
+        for (const parent of incoming.get(id) || []) {
+          if (seen.has(parent)) continue;
+          seen.add(parent);
+          next.push(parent);
+        }
+      }
+      frontier = next;
+    }
+
+    return levels;
+  }
+
+  /**
+   * What a step can see when it runs.
+   *
+   * A step used to receive only its direct predecessors' output, while the field
+   * picker in the editor offered values from every step upstream. So a workflow
+   * could be built exactly as the interface described it and still run with
+   * `{{themes}}` printed literally into the result, because the step producing
+   * `themes` was two hops back rather than one.
+   *
+   * Everything upstream is now in scope, merged from the farthest ancestor
+   * inwards so that nearer steps win a name clash: if a step's own predecessor
+   * produces `data`, that is the `data` it gets, not some earlier step's.
+   */
   private getNodeInputs(
     nodeId: string,
     context: ExecutionContext
   ): Record<string, unknown> {
     const inputs: Record<string, unknown> = {};
 
-    const incomingEdges = this.edges.filter((e) => e.target === nodeId);
+    const levels = this.ancestorsByDistance(nodeId);
+    for (let distance = levels.length - 1; distance >= 0; distance--) {
+      for (const ancestorId of levels[distance]) {
+        const output = context.nodeOutputs.get(ancestorId);
+        if (output) Object.assign(inputs, output);
+      }
+    }
 
-    for (const edge of incomingEdges) {
+    // A named handle asks for one specific value, so it is applied last and
+    // overrides anything of the same name that arrived by inheritance.
+    for (const edge of this.edges.filter((e) => e.target === nodeId)) {
       const sourceOutput = context.nodeOutputs.get(edge.source);
-      if (sourceOutput) {
-        const key = edge.sourceHandle || "default";
-        if (key === "default") {
-          Object.assign(inputs, sourceOutput);
-        } else {
-          inputs[key] = sourceOutput[key] ?? sourceOutput;
-        }
+      if (!sourceOutput) continue;
+
+      const key = edge.sourceHandle;
+      if (key && key !== "default") {
+        inputs[key] = sourceOutput[key] ?? sourceOutput;
       }
     }
 
