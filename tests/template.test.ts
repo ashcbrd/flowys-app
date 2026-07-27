@@ -159,4 +159,30 @@ describe("array rendering style", () => {
       interpolateVariables("{{items}}", { items: [{ a: 1 }] }, "keep", "list")
     ).toBe('- {"a":1}');
   });
+
+  it("reads a yes/no value as Yes or No in prose", () => {
+    expect(
+      interpolateVariables("{{ok}}", { ok: true }, "keep", "list")
+    ).toBe("Yes");
+    expect(
+      interpolateVariables("{{ok}}", { ok: false }, "keep", "list")
+    ).toBe("No");
+  });
+
+  it("reads a condition branch as Yes or No in prose", () => {
+    // A condition step hands on the branch it took as a string.
+    expect(
+      interpolateVariables("{{branch}}", { branch: "true" }, "keep", "list")
+    ).toBe("Yes");
+    expect(
+      interpolateVariables("{{branch}}", { branch: "false" }, "keep", "list")
+    ).toBe("No");
+  });
+
+  it("keeps true and false machine-readable outside prose", () => {
+    expect(interpolateVariables("{{ok}}", { ok: true })).toBe("true");
+    expect(
+      interpolateVariables("{{branch}}", { branch: "false" }, "empty", "json")
+    ).toBe("false");
+  });
 });

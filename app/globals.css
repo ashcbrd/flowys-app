@@ -191,3 +191,11 @@
 .fy-pill {
   border-radius: 9999px;
 }
+
+/* A side panel owns the right edge while it is open, so the floating Flux
+   launcher gets out of the way instead of sitting on top of the panel. */
+body[data-side-panel-open="true"] .fy-flux-launcher {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.5rem);
+}

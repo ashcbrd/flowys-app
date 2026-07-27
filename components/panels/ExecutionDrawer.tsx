@@ -55,6 +55,20 @@ export function ExecutionDrawer() {
     }
   }, [isExecuting]);
 
+  // While this drawer is open it owns the right-hand side of the screen. The
+  // Flux launcher floats there too and was covering the last result, so tell it
+  // to step aside. The attribute is cleared on unmount, not just on close.
+  useEffect(() => {
+    if (isOpen) {
+      document.body.dataset.sidePanelOpen = "true";
+    } else {
+      delete document.body.dataset.sidePanelOpen;
+    }
+    return () => {
+      delete document.body.dataset.sidePanelOpen;
+    };
+  }, [isOpen]);
+
   const hasExecutionData = isExecuting || executionLogs.length > 0 || lastExecution;
 
   // Don't render anything if there's no execution data
@@ -187,10 +201,28 @@ export function ExecutionDrawer() {
                         <Clock className="h-4 w-4 text-gray-400" />
                       )}
                       <span className="font-medium flex-1">{log.nodeName}</span>
-                      {log.duration && (
+                      {typeof log.duration === "number" && log.duration > 0 && (
                         <span className="text-muted-foreground text-xs">
                           {log.duration}ms
                         </span>
+                      )}
+                      {/* Expanding belongs on the card's own header row. Over the
+                          result it collided with the copy button. */}
+                      {log.output && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 shrink-0"
+                          onClick={() =>
+                            setOutputModal({
+                              nodeName: log.nodeName,
+                              output: log.output,
+                            })
+                          }
+                          title="Open in a bigger view"
+                        >
+                          <Maximize2 className="h-3 w-3" />
+                        </Button>
                       )}
                     </div>
                     {log.error && (
@@ -203,16 +235,7 @@ export function ExecutionDrawer() {
                         <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
                           View output
                         </summary>
-                        <div className="mt-2 relative">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 top-1 h-6 w-6 p-0"
-                            onClick={() => setOutputModal({ nodeName: log.nodeName, output: log.output })}
-                            title="Expand view"
-                          >
-                            <Maximize2 className="h-3 w-3" />
-                          </Button>
+                        <div className="mt-2">
                           <ResultView value={log.output} className="max-h-[420px] overflow-auto" />
                         </div>
                       </details>
@@ -243,9 +266,25 @@ export function ExecutionDrawer() {
                   ) : (
                     <XCircle className="h-5 w-5 text-red-600" />
                   )}
-                  <span className="font-semibold capitalize">
+                  <span className="font-semibold capitalize flex-1">
                     {lastExecution.status}
                   </span>
+                  {lastExecution.output && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 shrink-0"
+                      onClick={() =>
+                        setOutputModal({
+                          nodeName: "Final result",
+                          output: lastExecution.output,
+                        })
+                      }
+                      title="Open in a bigger view"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
                 {lastExecution.error && (
                   <div className="text-red-600 dark:text-red-400 text-sm mb-3 p-2 bg-red-100 dark:bg-red-900/30 rounded">
@@ -253,18 +292,10 @@ export function ExecutionDrawer() {
                   </div>
                 )}
                 {lastExecution.output && (
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1 h-6 w-6 p-0"
-                      onClick={() => setOutputModal({ nodeName: "Final Result", output: lastExecution.output })}
-                      title="Expand view"
-                    >
-                      <Maximize2 className="h-3 w-3" />
-                    </Button>
-                    <ResultView value={lastExecution.output} className="max-h-[420px] overflow-auto" />
-                  </div>
+                  <ResultView
+                    value={lastExecution.output}
+                    className="max-h-[420px] overflow-auto"
+                  />
                 )}
               </div>
 
