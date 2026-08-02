@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   Lightbulb,
   AlertCircle,
+  ExternalLink,
   Maximize2,
   X,
 } from "lucide-react";
@@ -158,20 +160,24 @@ export function ExecutionPanel() {
                       <span className="font-medium capitalize flex-1">
                         {lastExecution.status}
                       </span>
-                      {lastExecution.output && (
+                      {/* The finished result opens as its own page, not a
+                          modal: it has an address, it prints, and it reads
+                          like the document it is. */}
+                      {lastExecution.output && lastExecution.id && (
                         <Button
+                          asChild
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 shrink-0"
-                          onClick={() =>
-                            setOutputModal({
-                              nodeName: "Final result",
-                              output: lastExecution.output,
-                            })
-                          }
-                          title="Open in a bigger view"
+                          className="h-6 px-1.5 shrink-0 gap-1 text-xs"
+                          title="Open the result as a page"
                         >
-                          <Maximize2 className="h-3 w-3" />
+                          <Link
+                            href={`/results/${lastExecution.id}`}
+                            target="_blank"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open
+                          </Link>
                         </Button>
                       )}
                     </div>

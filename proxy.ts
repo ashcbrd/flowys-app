@@ -23,6 +23,7 @@ export default auth((req) => {
     "/preview",
     "/knowledge",
     "/apps",
+    "/results",
   ];
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -51,6 +52,7 @@ export const config = {
     "/preview/:path*",
     "/knowledge/:path*",
     "/apps/:path*",
+    "/results/:path*",
     "/login",
     "/signup",
   ],

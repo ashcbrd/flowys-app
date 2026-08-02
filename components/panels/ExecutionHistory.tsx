@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Clock,
   CheckCircle,
@@ -108,10 +109,13 @@ export function ExecutionHistory({
         ) : (
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {displayedExecutions.map((execution) => (
-              <div
+              <Link
                 key={execution.id}
+                href={`/results/${execution.id}`}
+                target="_blank"
+                title="Open this run's result page"
                 className={cn(
-                  "p-2 rounded text-sm flex items-center justify-between",
+                  "p-2 rounded text-sm flex items-center justify-between transition-opacity hover:opacity-80",
                   execution.status === "completed"
                     ? "bg-green-50 dark:bg-green-950/30"
                     : execution.status === "failed"
@@ -135,7 +139,7 @@ export function ExecutionHistory({
                   </span>
                   <span>{formatDate(execution.createdAt)}</span>
                 </div>
-              </div>
+              </Link>
             ))}
             {remainingCount > 0 && (
               <p className="text-xs text-muted-foreground text-center py-1">
@@ -187,10 +191,13 @@ export function ExecutionHistory({
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {displayedExecutions.map((execution) => (
-                <div
+                <Link
                   key={execution.id}
+                  href={`/results/${execution.id}`}
+                  target="_blank"
+                  title="Open this run's result page"
                   className={cn(
-                    "p-3 rounded-lg text-sm flex items-center justify-between",
+                    "p-3 rounded-lg text-sm flex items-center justify-between transition-opacity hover:opacity-80",
                     execution.status === "completed"
                       ? "bg-green-50 dark:bg-green-950/30"
                       : execution.status === "failed"
@@ -221,7 +228,7 @@ export function ExecutionHistory({
                     </span>
                     <span>{formatDate(execution.createdAt)}</span>
                   </div>
-                </div>
+                </Link>
               ))}
               {remainingCount > 0 && (
                 <p className="text-xs text-muted-foreground text-center py-1">
