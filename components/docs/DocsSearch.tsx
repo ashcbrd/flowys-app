@@ -97,51 +97,26 @@ const docsContent = [
   {
     section: "Node Types",
     sectionId: "nodes",
-    title: "Webhook Node",
-    content: "Send data to external services or trigger actions in other apps. Send Slack notifications, update Google Sheets, trigger Zapier.",
+    title: "Your docs step",
+    content: "Search the documents you have added and hand the best passages to the next step. Answers grounded in your own material.",
   },
   {
     section: "Node Types",
     sectionId: "nodes",
-    title: "Integration Node",
-    content: "Connect to third-party apps like Slack, GitHub, Google Sheets using pre-built integrations. Handle authentication automatically.",
-  },
-  // Integrations
-  {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "Overview",
-    content: "Integrations allow you to connect Flowys to external apps like Slack, GitHub, Google Sheets with secure authentication and pre-built actions.",
+    title: "Picture step",
+    content: "Create an image from a description. Ad images, illustrations, logo concepts. The finished picture is handed on as an address.",
   },
   {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "Slack Integration",
-    content: "Send messages, create channels, list channels, upload files to Slack using OAuth2 authentication.",
+    section: "Node Types",
+    sectionId: "nodes",
+    title: "Brand kit step",
+    content: "Turn a logo into mockups, a colour palette, and a brand board. Bottle, cup, tote bag, business card, storefront.",
   },
   {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "GitHub Integration",
-    content: "Create issues, create pull requests, list repositories, get and update files in GitHub using OAuth2.",
-  },
-  {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "Google Sheets Integration",
-    content: "Read range, write range, append rows, create spreadsheets in Google Sheets using OAuth2.",
-  },
-  {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "Notion Integration",
-    content: "Create pages, query databases, add items, search in Notion using OAuth2 authentication.",
-  },
-  {
-    section: "Integrations",
-    sectionId: "integrations",
-    title: "Security",
-    content: "AES-256 encryption for credentials at rest. OAuth2 tokens, never store passwords. Revoke integrations anytime.",
+    section: "Node Types",
+    sectionId: "nodes",
+    title: "Email step",
+    content: "Assemble a branded email that renders properly in real email clients. Layouts built in, preview before sending.",
   },
   // API
   {
