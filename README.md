@@ -170,7 +170,6 @@ npm start
 - **Email**: assemble a branded email that renders in real clients
 - **API**: fetch from external services
 - **Logic**: transform, filter, condition, sort, slice
-- **Webhook**: signed outbound delivery with retries
 - **Output**: the formatted result
 
 ### Marketing suite

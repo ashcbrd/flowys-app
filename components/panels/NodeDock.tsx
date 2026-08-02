@@ -11,8 +11,6 @@ import {
   Image as ImageIcon,
   Mail,
   Palette,
-  Plug,
-  Webhook,
 } from "lucide-react";
 import {
   Tooltip,
@@ -23,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkflowStore, type NodeType } from "@/store/workflow";
-import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
+import { COMING_SOON_LABEL } from "@/lib/features";
 
 interface DockItem {
   /** The kind of step this tile creates. */
@@ -102,23 +100,12 @@ const nodeTypes: DockItem[] = [
     color: "bg-amber-500",
     gradient: "from-amber-400 to-amber-600",
   },
-  {
-    type: "integration",
-    label: "Apps",
-    description: "Connect to Slack, GitHub, and more",
-    icon: <Plug className="h-5 w-5" />,
-    color: "bg-indigo-500",
-    gradient: "from-indigo-400 to-indigo-600",
-    comingSoon: !INTEGRATIONS_ENABLED,
-  },
-  {
-    type: "webhook",
-    label: "Webhook",
-    description: "Send data to external endpoints",
-    icon: <Webhook className="h-5 w-5" />,
-    color: "bg-cyan-500",
-    gradient: "from-cyan-400 to-cyan-600",
-  },
+  // The integration ("Apps") and webhook tiles are deliberately absent. Apps
+  // has no working connections yet, and the webhook step earned its keep as a
+  // template tail rather than something people reached for, so neither
+  // belongs in the palette. Both step types stay registered in the engine and
+  // the canvas, so any saved workflow that already carries one keeps running
+  // and rendering.
   {
     type: "output",
     label: "Output",

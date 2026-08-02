@@ -154,40 +154,6 @@ function fetchFrom(
   };
 }
 
-/**
- * Sends the finished result somewhere.
- *
- * Points at a public echo service so the step works out of the box and you can
- * see it succeed. Swap the address for your own, a webhook.site link shows each
- * delivery in a browser, and it keeps working.
- *
- * `continueOnError` matters: if the receiver is down, that should not throw away
- * a result the earlier steps already produced.
- */
-function sendTo(
-  id: string,
-  label: string,
-  col: number,
-  row: number,
-  payload: Record<string, unknown>
-) {
-  return {
-    id,
-    type: "webhook" as const,
-    position: at(col, row),
-    data: {
-      label,
-      config: {
-        url: "https://postman-echo.com/post",
-        method: "POST",
-        payloadTemplate: payload,
-        continueOnError: true,
-        timeout: 15000,
-      },
-    },
-  };
-}
-
 /** `wire("a>b", "b>c")`, keeps a wide graph's edges legible. */
 function wire(...pairs: string[]) {
   return pairs.map((pair, i) => {
@@ -202,7 +168,7 @@ export const SUPPORT_TRIAGE: WorkflowTemplate = {
   id: "support-triage",
   name: "Triage a support email, end to end",
   description:
-    "14 steps. Reads one support email and returns a clean ticket, an urgency call, likely causes, a draft reply, and a note for whoever picks it up.",
+    "13 steps. Reads one support email and returns a clean ticket, an urgency call, likely causes, a draft reply, and a note for whoever picks it up.",
   category: "Support",
   needs: "The email text, and who sent it",
   workflow: {
@@ -349,11 +315,6 @@ export const SUPPORT_TRIAGE: WorkflowTemplate = {
           "{{replyDraft}}",
         ].join("\n")
       ),
-      sendTo("n14", "Send it on", 6, 2, {
-        source: "flowys",
-        workflow: "Support triage",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -374,7 +335,6 @@ export const SUPPORT_TRIAGE: WorkflowTemplate = {
       "n10>n13",
       "n11>n13",
       "n12>n13",
-      "n13>n14"
     ),
   },
 };
@@ -385,7 +345,7 @@ const LEAD_QUALIFY: WorkflowTemplate = {
   id: "lead-qualify",
   name: "Qualify an enquiry and draft both replies",
   description:
-    "14 steps. Scores an enquiry against who you want to work with, flags the risks, and drafts the reply for either answer so you just pick one.",
+    "13 steps. Scores an enquiry against who you want to work with, flags the risks, and drafts the reply for either answer so you just pick one.",
   category: "Sales",
   needs: "The enquiry, and a line on your ideal customer",
   workflow: {
@@ -541,11 +501,6 @@ const LEAD_QUALIFY: WorkflowTemplate = {
           "{{passReply}}",
         ].join("\n")
       ),
-      sendTo("n14", "Send it on", 6, 2, {
-        source: "flowys",
-        workflow: "Enquiry verdict",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -567,7 +522,6 @@ const LEAD_QUALIFY: WorkflowTemplate = {
       "n10>n13",
       "n11>n13",
       "n12>n13",
-      "n13>n14"
     ),
   },
 };
@@ -578,7 +532,7 @@ const MEETING_NOTES: WorkflowTemplate = {
   id: "meeting-actions",
   name: "Turn a meeting recording into decisions and actions",
   description:
-    "15 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks, then drafts the follow-up message.",
+    "14 steps. Takes a transcript and pulls out what was decided, who owes what, what's still open, and the risks, then drafts the follow-up message.",
   category: "Meetings",
   needs: "A transcript file, a .txt export from your recorder works",
   workflow: {
@@ -732,11 +686,6 @@ const MEETING_NOTES: WorkflowTemplate = {
           "{{followUpMessage}}",
         ].join("\n")
       ),
-      sendTo("n15", "Send it on", 5, 2, {
-        source: "flowys",
-        workflow: "Meeting write-up",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -761,7 +710,6 @@ const MEETING_NOTES: WorkflowTemplate = {
       "n11>n14",
       "n12>n14",
       "n13>n14",
-      "n14>n15"
     ),
   },
 };
@@ -772,7 +720,7 @@ const REVIEW_THEMES: WorkflowTemplate = {
   id: "review-themes",
   name: "Turn a pile of reviews into a decision",
   description:
-    "11 steps. Reads a batch of reviews, finds the themes and the quiet signals, works out what's costing you customers, and says what to fix first.",
+    "10 steps. Reads a batch of reviews, finds the themes and the quiet signals, works out what's costing you customers, and says what to fix first.",
   category: "Customer feedback",
   needs: "A file of reviews, a CSV export works well",
   workflow: {
@@ -920,11 +868,6 @@ const REVIEW_THEMES: WorkflowTemplate = {
           "{{teamUpdate}}",
         ].join("\n")
       ),
-      sendTo("n11", "Send it on", 5, 1, {
-        source: "flowys",
-        workflow: "Review read-out",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -941,7 +884,6 @@ const REVIEW_THEMES: WorkflowTemplate = {
       "n7>n10",
       "n8>n10",
       "n9>n10",
-      "n10>n11"
     ),
   },
 };
@@ -952,7 +894,7 @@ const GITHUB_BRIEF: WorkflowTemplate = {
   id: "github-brief",
   name: "Brief me on a GitHub project",
   description:
-    "13 steps. Looks up any public project, reads its open issues, and tells you what it does, how healthy it looks, and whether it is worth adopting.",
+    "12 steps. Looks up any public project, reads its open issues, and tells you what it does, how healthy it looks, and whether it is worth adopting.",
   category: "Research",
   needs: "The owner and name of a public GitHub project",
   workflow: {
@@ -1100,11 +1042,6 @@ const GITHUB_BRIEF: WorkflowTemplate = {
         ].join("\n")
       ),
 
-      sendTo("n13", "Send the brief on", 6, 1, {
-        source: "flowys",
-        workflow: "GitHub project brief",
-        brief: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -1123,7 +1060,6 @@ const GITHUB_BRIEF: WorkflowTemplate = {
       "n9>n12",
       "n10>n12",
       "n11>n12",
-      "n12>n13"
     ),
   },
 };
@@ -1134,7 +1070,7 @@ const TOPIC_PULSE: WorkflowTemplate = {
   id: "topic-pulse",
   name: "See what people are saying about a topic",
   description:
-    "12 steps. Searches Hacker News for any subject, reads the discussion, and reports the mood, the themes and the strongest opinions.",
+    "11 steps. Searches Hacker News for any subject, reads the discussion, and reports the mood, the themes and the strongest opinions.",
   category: "Research",
   needs: "A subject to look up",
   workflow: {
@@ -1245,11 +1181,6 @@ const TOPIC_PULSE: WorkflowTemplate = {
         ].join("\n")
       ),
 
-      sendTo("n12", "Send the read-out on", 7, 1, {
-        source: "flowys",
-        workflow: "Topic pulse",
-        readout: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -1265,7 +1196,6 @@ const TOPIC_PULSE: WorkflowTemplate = {
       "n8>n11",
       "n9>n11",
       "n10>n11",
-      "n11>n12"
     ),
   },
 };
@@ -1367,7 +1297,7 @@ const AD_CREATIVE_PACK: WorkflowTemplate = {
   id: "ad-creative-pack",
   name: "Turn your brand material into a finished ad",
   description:
-    "10 steps. Reads the brand material you paste in, writes three headlines and the primary text from your own claims, checks nothing was invented, and generates the ad image to match.",
+    "9 steps. Reads the brand material you paste in, writes three headlines and the primary text from your own claims, checks nothing was invented, and generates the ad image to match.",
   category: "Marketing",
   needs: "What you sell, who it's for, and a paste of your brand material",
   workflow: {
@@ -1498,11 +1428,6 @@ const AD_CREATIVE_PACK: WorkflowTemplate = {
         ].join("\n")
       ),
 
-      sendTo("n10", "Send it on", 5, 1, {
-        source: "flowys",
-        workflow: "Ad creative pack",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -1521,7 +1446,6 @@ const AD_CREATIVE_PACK: WorkflowTemplate = {
       "n5>n9",
       "n7>n9",
       "n8>n9",
-      "n9>n10"
     ),
   },
 };
@@ -1532,7 +1456,7 @@ const LOGO_BRAND_BOARD: WorkflowTemplate = {
   id: "logo-brand-board",
   name: "A logo concept and the whole brand board",
   description:
-    "10 steps. Writes a design brief from your answers, generates a logo concept, puts it on a bottle, a cup, a tote, a card and a storefront, derives a colour palette from it, and lays it all out as a board.",
+    "9 steps. Writes a design brief from your answers, generates a logo concept, puts it on a bottle, a cup, a tote, a card and a storefront, derives a colour palette from it, and lays it all out as a board.",
   category: "Marketing",
   needs: "The business name, what it does, and three style words",
   workflow: {
@@ -1670,11 +1594,6 @@ const LOGO_BRAND_BOARD: WorkflowTemplate = {
         ].join("\n")
       ),
 
-      sendTo("n9", "Send it on", 6, 1, {
-        source: "flowys",
-        workflow: "Logo and brand board",
-        result: "{{result}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -1692,7 +1611,6 @@ const LOGO_BRAND_BOARD: WorkflowTemplate = {
       "n6>n8",
       "n7>n8",
       "n10>n8",
-      "n8>n9"
     ),
   },
 };
@@ -1703,7 +1621,7 @@ const EMAIL_CAMPAIGN: WorkflowTemplate = {
   id: "email-campaign",
   name: "An email campaign, designed and ready to send",
   description:
-    "10 steps. Plans the email from your brand material, writes the copy, assembles it into a branded layout that renders properly in real email clients, and hands on the subject and HTML shaped for your sender.",
+    "9 steps. Plans the email from your brand material, writes the copy, assembles it into a branded layout that renders properly in real email clients, and hands on the subject and HTML shaped for your sender.",
   category: "Marketing",
   needs: "Your brand material, the announcement, and where the button should go",
   workflow: {
@@ -1842,12 +1760,6 @@ const EMAIL_CAMPAIGN: WorkflowTemplate = {
         ].join("\n")
       ),
 
-      sendTo("n9", "Hand to your sender", 4, 1, {
-        source: "flowys",
-        workflow: "Email campaign",
-        subject: "{{subject}}",
-        html: "{{emailHtml}}",
-      }),
     ],
     edges: wire(
       "n1>n2",
@@ -1865,8 +1777,7 @@ const EMAIL_CAMPAIGN: WorkflowTemplate = {
       "n6>n8",
       "n7>n8",
       "n10>n8",
-      "n8>n9",
-      "n4>n9"
+
     ),
   },
 };

@@ -346,7 +346,7 @@ describe("every template is structurally sound", () => {
     "%s is a substantial automation, not a demo",
     (_id, template) => {
       // The whole point of these is to show what the product can do.
-      expect(template.workflow.nodes.length).toBeGreaterThanOrEqual(10);
+      expect(template.workflow.nodes.length).toBeGreaterThanOrEqual(9);
       expect(template.workflow.nodes.length).toBeLessThanOrEqual(20);
 
       // And the stated size must match reality.
