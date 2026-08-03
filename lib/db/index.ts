@@ -60,6 +60,11 @@ export {
 } from "./models/UserCredits";
 
 export {
+  User,
+  type IUser,
+} from "./models/User";
+
+export {
   RateLimit,
   type IRateLimit,
   checkRateLimit,

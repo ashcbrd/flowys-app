@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { Connection, decryptCredentials, IConnection } from "@/lib/db/models/Connection";
+import { Connection, IConnection } from "@/lib/db/models/Connection";
 import { integrationRegistry } from "@/lib/integrations/registry";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,10 +14,15 @@ interface RouteParams {
  */
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
-    const connection = await Connection.findById(id)
+    const connection = await Connection.findOne({ _id: id, userId: user.id })
       .select("-encryptedCredentials -credentialsIv")
       .lean<IConnection>();
 
@@ -50,11 +56,16 @@ export async function GET(request: Request, { params }: RouteParams) {
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
 
-    const connection = await Connection.findById(id);
+    const connection = await Connection.findOne({ _id: id, userId: user.id });
     if (!connection) {
       return NextResponse.json(
         { error: "Connection not found" },
@@ -98,10 +109,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
  */
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
-    const connection = await Connection.findByIdAndDelete(id);
+    const connection = await Connection.findOneAndDelete({ _id: id, userId: user.id });
     if (!connection) {
       return NextResponse.json(
         { error: "Connection not found" },

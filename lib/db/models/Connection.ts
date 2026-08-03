@@ -3,6 +3,7 @@ import crypto from "crypto";
 
 export interface IConnection {
   _id: string;
+  userId: string; // Owner of the connection
   integrationId: string;
   name: string;
 
@@ -26,6 +27,7 @@ export interface IConnection {
 const ConnectionSchema = new Schema<IConnection>(
   {
     _id: { type: String, required: true },
+    userId: { type: String, required: true, index: true },
     integrationId: { type: String, required: true, index: true },
     name: { type: String, required: true },
 

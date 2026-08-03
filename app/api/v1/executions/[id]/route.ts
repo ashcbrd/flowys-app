@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, Execution } from "@/lib/db";
+import { connectToDatabase, Execution, Workflow } from "@/lib/db";
 import { authenticateApiKey, createApiErrorResponse } from "@/lib/middleware/apiAuth";
 
 interface RouteParams {
@@ -48,6 +48,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const execution = await Execution.findById(id).lean();
 
     if (!execution) {
+      return createApiErrorResponse("Execution not found", 404);
+    }
+
+    // The API key may only read executions of workflows it owns.
+    const workflow = await Workflow.findById(execution.workflowId).select("userId").lean();
+    if (!workflow || workflow.userId !== authResult.apiKey!.userId) {
       return createApiErrorResponse("Execution not found", 404);
     }
 

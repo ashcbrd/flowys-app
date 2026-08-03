@@ -126,5 +126,6 @@ export interface OAuthState {
   integrationId: string;
   connectionName: string;
   redirectUrl: string;
+  userId: string;
   timestamp: number;
 }

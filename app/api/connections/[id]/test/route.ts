@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Connection, decryptCredentials } from "@/lib/db/models/Connection";
 import { integrationRegistry } from "@/lib/integrations/registry";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,10 +14,15 @@ interface RouteParams {
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
-    const connection = await Connection.findById(id);
+    const connection = await Connection.findOne({ _id: id, userId: user.id });
     if (!connection) {
       return NextResponse.json(
         { error: "Connection not found" },

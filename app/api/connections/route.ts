@@ -2,20 +2,26 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Connection, encryptCredentials, IConnection } from "@/lib/db/models/Connection";
 import { integrationRegistry } from "@/lib/integrations/registry";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { v4 as uuid } from "uuid";
 
 /**
  * GET /api/connections
- * List all connections
+ * List the current user's connections
  */
 export async function GET(request: Request) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
     const integrationId = searchParams.get("integrationId");
 
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { userId: user.id };
     if (integrationId) {
       query.integrationId = integrationId;
     }
@@ -53,6 +59,11 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { integrationId, name, credentials } = body;
 
@@ -97,6 +108,7 @@ export async function POST(request: Request) {
 
     const connection = await Connection.create({
       _id: uuid(),
+      userId: user.id,
       integrationId,
       name,
       encryptedCredentials: encrypted,
