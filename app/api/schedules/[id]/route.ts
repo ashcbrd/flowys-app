@@ -10,16 +10,22 @@ import {
   stopScheduleJob,
   executeScheduledWorkflow,
 } from "@/lib/services/scheduler";
+import { getAuthenticatedUser, userOwnsWorkflow } from "@/lib/auth-helpers";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
     const schedule = await Schedule.findById(id).lean();
-    if (!schedule) {
+    if (!schedule || !(await userOwnsWorkflow(String(schedule.workflowId), user.id))) {
       return NextResponse.json(
         { error: "Schedule not found" },
         { status: 404 }
@@ -58,11 +64,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
     const schedule = await Schedule.findById(id);
-    if (!schedule) {
+    if (!schedule || !(await userOwnsWorkflow(String(schedule.workflowId), user.id))) {
       return NextResponse.json(
         { error: "Schedule not found" },
         { status: 404 }
@@ -155,11 +166,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
     const schedule = await Schedule.findById(id);
-    if (!schedule) {
+    if (!schedule || !(await userOwnsWorkflow(String(schedule.workflowId), user.id))) {
       return NextResponse.json(
         { error: "Schedule not found" },
         { status: 404 }
@@ -185,11 +201,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 // POST to trigger a schedule manually
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
     const schedule = await Schedule.findById(id);
-    if (!schedule) {
+    if (!schedule || !(await userOwnsWorkflow(String(schedule.workflowId), user.id))) {
       return NextResponse.json(
         { error: "Schedule not found" },
         { status: 404 }

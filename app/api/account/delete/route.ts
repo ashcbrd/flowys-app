@@ -46,8 +46,8 @@ export async function DELETE(request: NextRequest) {
     const scheduleResult = await Schedule.deleteMany({ workflowId: { $in: await getUserWorkflowIds(user.id) } });
     deletionResults.schedules = scheduleResult.deletedCount;
 
-    // 3. Delete webhooks (depends on workflows)
-    const webhookResult = await Webhook.deleteMany({ workflowId: { $in: await getUserWorkflowIds(user.id) } });
+    // 3. Delete webhooks (owned by the user)
+    const webhookResult = await Webhook.deleteMany({ userId: user.id });
     deletionResults.webhooks = webhookResult.deletedCount;
 
     // 4. Delete workflows
@@ -58,9 +58,9 @@ export async function DELETE(request: NextRequest) {
     const apiKeyResult = await ApiKey.deleteMany({ userId: user.id });
     deletionResults.apiKeys = apiKeyResult.deletedCount;
 
-    // 6. Delete connections (integration credentials)
-    // Note: These are user-specific - need to add userId to Connection model if not present
-    // For now, connections are global, so we skip this
+    // 6. Delete connections (integration credentials owned by the user)
+    const connectionResult = await Connection.deleteMany({ userId: user.id });
+    deletionResults.connections = connectionResult.deletedCount;
 
     // 7. Delete credits state
     const userCreditsResult = await UserCredits.deleteMany({ userId: user.id });
@@ -104,9 +104,10 @@ export async function GET() {
     const counts = {
       workflows: await Workflow.countDocuments({ userId: user.id }),
       executions: await Execution.countDocuments({ workflowId: { $in: workflowIds } }),
-      webhooks: await Webhook.countDocuments({ workflowId: { $in: workflowIds } }),
+      webhooks: await Webhook.countDocuments({ userId: user.id }),
       schedules: await Schedule.countDocuments({ workflowId: { $in: workflowIds } }),
       apiKeys: await ApiKey.countDocuments({ userId: user.id }),
+      connections: await Connection.countDocuments({ userId: user.id }),
       userCredits: await UserCredits.countDocuments({ userId: user.id }),
     };
 

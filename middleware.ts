@@ -21,8 +21,8 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to workflow if already logged in and trying to access login page
-  if (pathname === "/login" && isLoggedIn) {
+  // Redirect to workflow if already logged in and trying to access login/signup
+  if ((pathname === "/login" || pathname === "/signup") && isLoggedIn) {
     return NextResponse.redirect(new URL("/workflow", req.url));
   }
 
@@ -36,5 +36,6 @@ export const config = {
     "/settings/:path*",
     "/preview/:path*",
     "/login",
+    "/signup",
   ],
 };
