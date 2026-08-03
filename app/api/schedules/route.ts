@@ -7,18 +7,33 @@ import {
   frequencyToCron,
   getNextRunTime,
 } from "@/lib/db";
-import { startScheduleJob, stopScheduleJob } from "@/lib/services/scheduler";
+import { startScheduleJob } from "@/lib/services/scheduler";
+import {
+  getAuthenticatedUser,
+  getUserWorkflowIds,
+  userOwnsWorkflow,
+} from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
     const workflowId = searchParams.get("workflowId");
     const enabled = searchParams.get("enabled");
 
-    const query: Record<string, unknown> = {};
-    if (workflowId) query.workflowId = workflowId;
+    // Always constrain to the caller's own workflows.
+    const ownedIds = await getUserWorkflowIds(user.id);
+    const query: Record<string, unknown> = {
+      workflowId: workflowId
+        ? (ownedIds.includes(workflowId) ? workflowId : "__none__")
+        : { $in: ownedIds },
+    };
     if (enabled !== null) query.enabled = enabled === "true";
 
     const schedules = await Schedule.find(query)
@@ -60,6 +75,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const body = await request.json();
@@ -100,9 +120,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify workflow exists
+    // Verify the workflow exists and belongs to the caller
     const workflow = await Workflow.findById(workflowId);
-    if (!workflow) {
+    if (!workflow || !(await userOwnsWorkflow(workflowId, user.id))) {
       return NextResponse.json(
         { error: "Workflow not found" },
         { status: 404 }

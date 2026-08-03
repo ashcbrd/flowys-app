@@ -29,7 +29,8 @@ export class OAuth2Handler {
   getAuthorizationUrl(
     config: IntegrationConfig,
     connectionName: string,
-    redirectUrl: string
+    redirectUrl: string,
+    userId: string
   ): { url: string; state: string } {
     if (!config.oauth2) {
       throw new Error("Integration does not support OAuth2");
@@ -37,11 +38,14 @@ export class OAuth2Handler {
 
     const state = crypto.randomBytes(32).toString("hex");
 
-    // Store state for verification
+    // Store state for verification. userId travels with the state so the
+    // connection created at callback time is owned by the person who started
+    // the flow.
     oauthStates.set(state, {
       integrationId: config.id,
       connectionName,
       redirectUrl,
+      userId,
       timestamp: Date.now(),
     });
 

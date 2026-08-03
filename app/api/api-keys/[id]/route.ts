@@ -134,7 +134,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       update.scopes = scopes;
     }
 
-    const apiKey = await ApiKey.findByIdAndUpdate(
+    const apiKey = await ApiKey.findOneAndUpdate(
       { _id: id, userId: user.id },
       { $set: update },
       { new: true }

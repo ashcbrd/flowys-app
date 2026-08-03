@@ -86,6 +86,7 @@ export async function GET(request: Request) {
 
     await Connection.create({
       _id: uuid(),
+      userId: oauthState.userId,
       integrationId,
       name: oauthState.connectionName,
       encryptedCredentials: encrypted,
