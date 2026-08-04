@@ -70,6 +70,12 @@ export {
 } from "./models/Workspace";
 
 export {
+  Membership,
+  type IMembership,
+  type Role,
+} from "./models/Membership";
+
+export {
   RateLimit,
   type IRateLimit,
   checkRateLimit,
