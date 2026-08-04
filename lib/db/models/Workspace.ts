@@ -14,10 +14,18 @@ const WorkspaceSchema = new Schema<IWorkspace>(
   {
     _id: { type: String, default: () => uuid() },
     name: { type: String, required: true, trim: true },
-    ownerUserId: { type: String, required: true, index: true },
+    ownerUserId: { type: String, required: true },
     personal: { type: Boolean, default: false },
   },
   { timestamps: true, _id: false }
+);
+
+// Guarantees exactly one personal workspace per owner, even under concurrent
+// sign-ins — the app-layer upsert in lib/workspaces/service.ts relies on this
+// index to make getOrCreatePersonalWorkspace race-safe.
+WorkspaceSchema.index(
+  { ownerUserId: 1 },
+  { unique: true, partialFilterExpression: { personal: true } }
 );
 
 export const Workspace: Model<IWorkspace> =

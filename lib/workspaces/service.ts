@@ -2,23 +2,51 @@ import { connectToDatabase } from "@/lib/db";
 import { Workspace } from "@/lib/db/models/Workspace";
 import { Membership, type IMembership, type Role } from "@/lib/db/models/Membership";
 
+function isDuplicateKeyError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: number }).code === 11000;
+}
+
 /**
  * The id of the user's personal workspace, creating it (and an owner
- * membership) on first call. Idempotent — safe to call on every sign-in.
+ * membership) on first call. Idempotent and race-safe — safe to call
+ * concurrently (e.g. two simultaneous sign-ins for the same user) as well as
+ * repeatedly.
+ *
+ * Relies on the partial unique index on Workspace { ownerUserId, personal:
+ * true } (see lib/db/models/Workspace.ts) so that only one caller ever wins
+ * the insert; the loser re-queries for the winner's workspace instead of
+ * erroring.
  */
 export async function getOrCreatePersonalWorkspace(userId: string): Promise<string> {
   await connectToDatabase();
 
-  const existing = await Workspace.findOne({ ownerUserId: userId, personal: true });
-  if (existing) return existing._id;
+  let workspaceId: string;
+  try {
+    const workspace = await Workspace.findOneAndUpdate(
+      { ownerUserId: userId, personal: true },
+      { $setOnInsert: { name: "Personal", ownerUserId: userId, personal: true } },
+      { upsert: true, new: true }
+    );
+    workspaceId = workspace!._id;
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
+    // Lost a concurrent upsert race against the unique index — another
+    // call already created the workspace; use that one.
+    const existing = await Workspace.findOne({ ownerUserId: userId, personal: true });
+    if (!existing) throw err;
+    workspaceId = existing._id;
+  }
 
-  const workspace = await Workspace.create({
-    name: "Personal",
-    ownerUserId: userId,
-    personal: true,
-  });
-  await Membership.create({ workspaceId: workspace._id, userId, role: "owner" });
-  return workspace._id;
+  // Idempotent upsert: the unique index on Membership { workspaceId, userId }
+  // (see lib/db/models/Membership.ts) means a re-run or a concurrent call
+  // never creates a second membership.
+  await Membership.updateOne(
+    { workspaceId, userId },
+    { $setOnInsert: { role: "owner" } },
+    { upsert: true }
+  );
+
+  return workspaceId;
 }
 
 export async function getUserMemberships(userId: string): Promise<IMembership[]> {
