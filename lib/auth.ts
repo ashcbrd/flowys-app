@@ -53,7 +53,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user }) {
       if (user.id) {
         const { getOrCreateCredits } = await import("@/lib/credits");
+        const { getOrCreatePersonalWorkspace } = await import("@/lib/workspaces/service");
         await getOrCreateCredits(user.id);
+        await getOrCreatePersonalWorkspace(user.id);
       }
       return true;
     },
