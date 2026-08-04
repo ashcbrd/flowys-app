@@ -98,3 +98,12 @@ export {
   Chunk,
   type IChunk,
 } from "./models/Chunk";
+
+export {
+  AppListing,
+  type IAppListing,
+  type IAppAudience,
+  type IAppSettings,
+  type AppStatus,
+  type AudienceMode,
+} from "./models/AppListing";
