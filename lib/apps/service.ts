@@ -1,6 +1,9 @@
 import { connectToDatabase, Workflow } from "@/lib/db";
 import { AppListing } from "@/lib/db/models/AppListing";
 import { AppVersion } from "@/lib/db/models/AppVersion";
+import { getWorkspaceRole } from "@/lib/workspaces/service";
+import { userCanAccessApp } from "./access";
+import type { IAppListing } from "@/lib/db/models/AppListing";
 
 /**
  * Freeze the app's workflow into a new immutable version and make it the live
@@ -54,4 +57,21 @@ export async function getCurrentSnapshot(
   if (!listing?.currentVersionId) return null;
   const version = await AppVersion.findById(listing.currentVersionId).lean();
   return (version?.snapshot as { nodes: unknown[]; edges: unknown[] }) ?? null;
+}
+
+/**
+ * Load an app for a user, enforcing workspace membership + the app's audience.
+ * Returns null (not an error) when the user may not access it, so callers can
+ * treat "no access" and "not found" identically — no existence leak.
+ */
+export async function getAppForUser(
+  appListingId: string,
+  userId: string
+): Promise<IAppListing | null> {
+  await connectToDatabase();
+  const listing = await AppListing.findById(appListingId).lean<IAppListing>();
+  if (!listing) return null;
+  const role = await getWorkspaceRole(listing.workspaceId, userId);
+  if (!userCanAccessApp(listing.audience, { userId, role })) return null;
+  return listing;
 }
