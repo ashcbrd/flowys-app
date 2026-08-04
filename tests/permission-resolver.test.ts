@@ -33,6 +33,23 @@ describe("userCanSeeDocument", () => {
     const doc: DocRef = { _id: "d1", acl: { mode: "restricted", allowedUserIds: ["u1"] } };
     expect(userCanSeeDocument(doc, owner)).toBe(false);
   });
+
+  it("denies a workspace-mode document when role is null (non-member)", () => {
+    const nonMember = { userId: "u1", role: null };
+    const doc: DocRef = { _id: "d1", acl: { mode: "workspace" } };
+    expect(userCanSeeDocument(doc, nonMember)).toBe(false);
+  });
+
+  it("denies a restricted document when role is null (non-member)", () => {
+    const nonMember = { userId: "u1", role: null };
+    const doc: DocRef = { _id: "d1", acl: { mode: "restricted", allowedUserIds: ["u1"] } };
+    expect(userCanSeeDocument(doc, nonMember)).toBe(false);
+  });
+
+  it("denies a restricted document with an empty allow-list for a normal member", () => {
+    const doc: DocRef = { _id: "d1", acl: { mode: "restricted", allowedUserIds: [] } };
+    expect(userCanSeeDocument(doc, member)).toBe(false);
+  });
 });
 
 describe("resolveAllowedDocumentIds", () => {
