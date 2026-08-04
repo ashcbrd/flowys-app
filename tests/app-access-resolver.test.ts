@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { userCanAccessApp } from "@/lib/apps/access";
+import type { IAppAudience } from "@/lib/db/models/AppListing";
 
 const member = { userId: "u1", role: "member" as const };
 const nonMember = { userId: "u1", role: null };
@@ -25,5 +26,14 @@ describe("userCanAccessApp", () => {
     expect(userCanAccessApp({ mode: "users", userIds: ["u1"] }, member)).toBe(true);
     expect(userCanAccessApp({ mode: "users", userIds: ["u2"] }, member)).toBe(false);
     expect(userCanAccessApp({ mode: "users" }, member)).toBe(false); // no list
+  });
+
+  it("denies when allow-lists are empty", () => {
+    expect(userCanAccessApp({ mode: "roles", roles: [] }, member)).toBe(false);
+    expect(userCanAccessApp({ mode: "users", userIds: [] }, member)).toBe(false);
+  });
+
+  it("denies unknown/unexpected audience mode", () => {
+    expect(userCanAccessApp({ mode: "bogus" } as unknown as IAppAudience, member)).toBe(false);
   });
 });
