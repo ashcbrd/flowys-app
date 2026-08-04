@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import crypto from "crypto";
 
 export type WebhookEvent =
   | "workflow.started"
@@ -114,21 +115,13 @@ WebhookSchema.pre("save", function(next) {
 });
 
 function generateSlug(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let slug = "";
-  for (let i = 0; i < 24; i++) {
-    slug += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return slug;
+  // The slug is the public webhook URL, so it has to be unguessable rather than
+  // merely unique. 24 hex chars keeps the existing [a-z0-9] shape and length.
+  return crypto.randomBytes(12).toString("hex");
 }
 
 function generateSecret(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let secret = "whsec_";
-  for (let i = 0; i < 32; i++) {
-    secret += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return secret;
+  return `whsec_${crypto.randomBytes(24).toString("base64url")}`;
 }
 
 export const Webhook: Model<IWebhook> =
