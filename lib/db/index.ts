@@ -93,3 +93,8 @@ export {
   type IDocumentAcl,
   type DocumentStatus,
 } from "./models/KnowledgeDocument";
+
+export {
+  Chunk,
+  type IChunk,
+} from "./models/Chunk";
