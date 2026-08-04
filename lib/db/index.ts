@@ -65,6 +65,11 @@ export {
 } from "./models/User";
 
 export {
+  Workspace,
+  type IWorkspace,
+} from "./models/Workspace";
+
+export {
   RateLimit,
   type IRateLimit,
   checkRateLimit,
