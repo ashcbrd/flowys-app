@@ -48,6 +48,12 @@ export async function runApp(params: {
   const nodes = snapshot.nodes as NodeData[];
   const edges = snapshot.edges as EdgeData[];
 
+  const cost = calculateWorkflowCost(nodes);
+  const cap = listing.settings?.costCapPerRun;
+  if (typeof cap === "number" && cost > cap) {
+    throw new AppRunError("This run is too large to allow. Please contact the app's owner.", "cost_exceeded");
+  }
+
   const perHour = listing.settings?.rateLimitPerHour;
   if (perHour && perHour > 0) {
     const rl = await checkRateLimit({
@@ -63,12 +69,6 @@ export async function runApp(params: {
     }
   }
 
-  const cost = calculateWorkflowCost(nodes);
-  const cap = listing.settings?.costCapPerRun;
-  if (typeof cap === "number" && cost > cap) {
-    throw new AppRunError("This run is too large to allow. Please contact the app's owner.", "cost_exceeded");
-  }
-
   const appRunId = uuid();
   const startedAt = new Date();
   await AppRun.create({
@@ -82,28 +82,12 @@ export async function runApp(params: {
     startedAt,
   });
 
+  let result;
   try {
-    const result = await createExecutor(nodes, edges).execute(input);
-    await deductCredits(runByUserId, cost);
-
-    await AppRun.updateOne(
-      { _id: appRunId },
-      {
-        $set: {
-          status: result.success ? "completed" : "failed",
-          output: result.output,
-          logs: result.logs,
-          error: result.error,
-          cost,
-          durationMs: result.duration,
-          completedAt: new Date(),
-        },
-      }
-    );
-
-    return { appRunId, success: result.success, output: result.output, error: result.error, cost };
+    result = await createExecutor(nodes, edges).execute(input);
   } catch (err) {
-    // Best-effort finalize so the run is never stuck "running".
+    // The executor itself failed before producing a result (e.g. a cycle) —
+    // this is a genuine pre-completion failure. Finalize as failed and re-throw.
     await AppRun.updateOne(
       { _id: appRunId },
       {
@@ -117,4 +101,30 @@ export async function runApp(params: {
     ).catch(() => {});
     throw err;
   }
+
+  // The run itself is complete once execute() has returned a result. A
+  // metering hiccup or a finalize-write hiccup from here on must never
+  // mislabel a completed run or discard its output.
+  try {
+    await deductCredits(runByUserId, cost);
+  } catch {
+    // Metering hiccup must not fail a completed run.
+  }
+
+  await AppRun.updateOne(
+    { _id: appRunId },
+    {
+      $set: {
+        status: result.success ? "completed" : "failed",
+        output: result.output,
+        logs: result.logs,
+        error: result.error,
+        cost,
+        durationMs: result.duration,
+        completedAt: new Date(),
+      },
+    }
+  ).catch(() => {});
+
+  return { appRunId, success: result.success, output: result.output, error: result.error, cost };
 }
