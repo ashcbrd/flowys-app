@@ -107,3 +107,8 @@ export {
   type AppStatus,
   type AudienceMode,
 } from "./models/AppListing";
+
+export {
+  AppVersion,
+  type IAppVersion,
+} from "./models/AppVersion";
