@@ -10,10 +10,12 @@ const TEST_USER = `live-test-${Date.now()}`;
 describe("workspace service (live)", () => {
   afterAll(async () => {
     await connectToDatabase();
-    const ws = await Workspace.find({ ownerUserId: TEST_USER });
+    // Matches TEST_USER itself and the "-concurrent" variant used below.
+    const ownerFilter = { ownerUserId: { $regex: `^${TEST_USER}` } };
+    const ws = await Workspace.find(ownerFilter);
     const ids = ws.map((w) => w._id);
     await Membership.deleteMany({ workspaceId: { $in: ids } });
-    await Workspace.deleteMany({ ownerUserId: TEST_USER });
+    await Workspace.deleteMany(ownerFilter);
   });
 
   it("creates a personal workspace with an owner membership, idempotently", async () => {
@@ -27,5 +29,29 @@ describe("workspace service (live)", () => {
     await connectToDatabase();
     const count = await Workspace.countDocuments({ ownerUserId: TEST_USER, personal: true });
     expect(count).toBe(1);
+  });
+
+  it("stays race-safe under concurrent sign-ins for the same user", async () => {
+    const CONCURRENT_USER = `${TEST_USER}-concurrent`;
+
+    const [first, second] = await Promise.all([
+      getOrCreatePersonalWorkspace(CONCURRENT_USER),
+      getOrCreatePersonalWorkspace(CONCURRENT_USER),
+    ]);
+    expect(first).toBe(second);
+
+    await connectToDatabase();
+    const workspaceCount = await Workspace.countDocuments({
+      ownerUserId: CONCURRENT_USER,
+      personal: true,
+    });
+    expect(workspaceCount).toBe(1);
+
+    const membershipCount = await Membership.countDocuments({
+      workspaceId: first,
+      userId: CONCURRENT_USER,
+      role: "owner",
+    });
+    expect(membershipCount).toBe(1);
   });
 });
