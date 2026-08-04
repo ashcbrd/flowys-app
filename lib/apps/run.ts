@@ -82,23 +82,39 @@ export async function runApp(params: {
     startedAt,
   });
 
-  const result = await createExecutor(nodes, edges).execute(input);
-  await deductCredits(runByUserId, cost);
+  try {
+    const result = await createExecutor(nodes, edges).execute(input);
+    await deductCredits(runByUserId, cost);
 
-  await AppRun.updateOne(
-    { _id: appRunId },
-    {
-      $set: {
-        status: result.success ? "completed" : "failed",
-        output: result.output,
-        logs: result.logs,
-        error: result.error,
-        cost,
-        durationMs: result.duration,
-        completedAt: new Date(),
-      },
-    }
-  );
+    await AppRun.updateOne(
+      { _id: appRunId },
+      {
+        $set: {
+          status: result.success ? "completed" : "failed",
+          output: result.output,
+          logs: result.logs,
+          error: result.error,
+          cost,
+          durationMs: result.duration,
+          completedAt: new Date(),
+        },
+      }
+    );
 
-  return { appRunId, success: result.success, output: result.output, error: result.error, cost };
+    return { appRunId, success: result.success, output: result.output, error: result.error, cost };
+  } catch (err) {
+    // Best-effort finalize so the run is never stuck "running".
+    await AppRun.updateOne(
+      { _id: appRunId },
+      {
+        $set: {
+          status: "failed",
+          error: "The run could not be completed.",
+          cost,
+          completedAt: new Date(),
+        },
+      }
+    ).catch(() => {});
+    throw err;
+  }
 }

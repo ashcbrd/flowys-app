@@ -44,6 +44,8 @@ describe("runApp (live)", () => {
     const recorded = await AppRun.findById(result.appRunId).lean();
     expect(recorded?.status).toBe("completed");
     expect(recorded?.runByUserId).toBe(member);
+    expect(recorded?.completedAt).not.toBeNull();
+    expect(recorded?.completedAt).not.toBeUndefined();
 
     await expect(
       runApp({ appListingId: appId, runByUserId: outsider, input: { name: "Eve" } })
