@@ -81,3 +81,8 @@ export {
   checkRateLimit,
   getRateLimitStatus,
 } from "./models/RateLimit";
+
+export {
+  KnowledgeBase,
+  type IKnowledgeBase,
+} from "./models/KnowledgeBase";
