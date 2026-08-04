@@ -40,11 +40,18 @@ export async function getOrCreatePersonalWorkspace(userId: string): Promise<stri
   // Idempotent upsert: the unique index on Membership { workspaceId, userId }
   // (see lib/db/models/Membership.ts) means a re-run or a concurrent call
   // never creates a second membership.
-  await Membership.updateOne(
-    { workspaceId, userId },
-    { $setOnInsert: { role: "owner" } },
-    { upsert: true }
-  );
+  try {
+    await Membership.updateOne(
+      { workspaceId, userId },
+      { $setOnInsert: { role: "owner" } },
+      { upsert: true }
+    );
+  } catch (err) {
+    // Lost a concurrent upsert race against the membership unique index —
+    // another call already created it. That's success, not a failure: the
+    // membership this call wanted to ensure exists, does.
+    if (!isDuplicateKeyError(err)) throw err;
+  }
 
   return workspaceId;
 }
