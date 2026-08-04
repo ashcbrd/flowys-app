@@ -86,3 +86,10 @@ export {
   KnowledgeBase,
   type IKnowledgeBase,
 } from "./models/KnowledgeBase";
+
+export {
+  KnowledgeDocument,
+  type IKnowledgeDocument,
+  type IDocumentAcl,
+  type DocumentStatus,
+} from "./models/KnowledgeDocument";
