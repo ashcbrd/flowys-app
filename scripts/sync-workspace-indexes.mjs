@@ -36,6 +36,10 @@ if (!uri) {
 // the app's model.
 const WorkspaceSchema = new mongoose.Schema(
   {
+    // No uuid default here (unlike the real model): this script is
+    // index-only and never inserts documents, so an _id default is
+    // intentionally omitted. Do not copy this schema as a template for
+    // anything that writes data.
     _id: { type: String },
     name: { type: String, required: true, trim: true },
     ownerUserId: { type: String, required: true },
