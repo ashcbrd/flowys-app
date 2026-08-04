@@ -112,3 +112,8 @@ export {
   AppVersion,
   type IAppVersion,
 } from "./models/AppVersion";
+
+export {
+  AppRun,
+  type IAppRun,
+} from "./models/AppRun";
