@@ -510,7 +510,9 @@ describe("combinations", () => {
       });
 
       expectSuccess(result);
-      expect(String(result.output?.result)).toMatch(/Worth replying: (true|false)/);
+      // A condition branch reads as prose ("Yes"/"No"), not the stored
+      // "true"/"false" — see interpolateVariables' list/yes-no rendering.
+      expect(String(result.output?.result)).toMatch(/Worth replying: (Yes|No)/);
       expect(String(result.output?.result)).not.toMatch(/\{\{/);
     },
     LONG

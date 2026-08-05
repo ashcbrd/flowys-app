@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { integrationRegistry } from "@/lib/integrations/registry";
 import { createOAuth2Handler } from "@/lib/integrations/oauth";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,6 +13,11 @@ interface RouteParams {
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const integration = integrationRegistry.get(id);
 
@@ -45,7 +51,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { url, state } = oauth.getAuthorizationUrl(
       config,
       connectionName,
-      redirectUrl || "/"
+      redirectUrl || "/",
+      user.id
     );
 
     return NextResponse.json({ authorizationUrl: url, state });

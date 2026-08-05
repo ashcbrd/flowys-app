@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, Webhook, type WebhookEvent } from "@/lib/db";
+import { connectToDatabase, Webhook } from "@/lib/db";
+import { getAuthenticatedUser, userOwnsWorkflow } from "@/lib/auth-helpers";
 
-// GET /api/webhooks - List all webhooks
+// GET /api/webhooks - List the current user's webhooks
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
@@ -11,7 +17,7 @@ export async function GET(request: NextRequest) {
     const workflowId = searchParams.get("workflowId");
     const enabled = searchParams.get("enabled");
 
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { userId: user.id };
     if (type) query.type = type;
     if (workflowId) query.workflowId = workflowId;
     if (enabled !== null) query.enabled = enabled === "true";
@@ -59,6 +65,11 @@ export async function GET(request: NextRequest) {
 // POST /api/webhooks - Create a new webhook
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const body = await request.json();
@@ -124,7 +135,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // A webhook may only point at a workflow the caller owns.
+    if (workflowId && !(await userOwnsWorkflow(workflowId, user.id))) {
+      return NextResponse.json(
+        { error: "Workflow not found" },
+        { status: 404 }
+      );
+    }
+
     const webhook = await Webhook.create({
+      userId: user.id,
       name,
       description,
       type,

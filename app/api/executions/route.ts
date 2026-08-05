@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, Execution } from "@/lib/db";
+import { getAuthenticatedUser, getUserWorkflowIds } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const executions = await Execution.find()
+    const workflowIds = await getUserWorkflowIds(user.id);
+    const executions = await Execution.find({ workflowId: { $in: workflowIds } })
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(offset)

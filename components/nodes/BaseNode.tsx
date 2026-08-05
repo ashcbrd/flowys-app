@@ -4,6 +4,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { Check, AlertCircle } from "lucide-react";
+import { LOGIC_OPERATIONS, labelFor } from "@/lib/vocabulary";
 
 interface BaseNodeProps extends NodeProps {
   icon: ReactNode;
@@ -217,7 +218,13 @@ function getNodePreview(config: Record<string, unknown>): string | null {
   return null;
 }
 
-function getNodeSubtitle(config: Record<string, unknown>): string | null {
+export function getNodeSubtitle(config: Record<string, unknown>): string | null {
+  // Logic step, name the operation from the vocabulary. Never the stored value
+  // ("condition", "filter"), which is developer jargon on the canvas.
+  if (typeof config.operation === "string") {
+    return labelFor(LOGIC_OPERATIONS, config.operation);
+  }
+
   // AI step, how many named values it hands to the next step.
   const schema = config.outputSchema as
     | { properties?: Record<string, unknown> }
