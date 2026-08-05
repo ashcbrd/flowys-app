@@ -65,9 +65,16 @@ export default function AppRunPage({ params }: PageProps) {
       }
       const data: AppData = await res.json();
       setApp(data);
+      // Text fields start empty; a default is what the engine falls back to
+      // when the answer is left blank, and it shows as the placeholder rather
+      // than pre-typed text that reads as somebody's answer. Booleans are the
+      // exception: the select always shows a real state, and "false" submits
+      // as a value the engine would never override with the default.
       const initial: Record<string, string> = {};
       for (const f of data.fields) {
-        if (f.default !== undefined && f.default !== null) initial[f.name] = String(f.default);
+        if (f.type === "boolean" && f.default !== undefined && f.default !== null) {
+          initial[f.name] = String(f.default);
+        }
       }
       setValues(initial);
     })();
@@ -216,7 +223,7 @@ export default function AppRunPage({ params }: PageProps) {
                       id={f.name}
                       value={values[f.name] ?? ""}
                       onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
-                      placeholder={f.placeholder}
+                      placeholder={f.placeholder ?? (f.default !== undefined && f.default !== null && f.default !== "" ? String(f.default) : undefined)}
                       rows={5}
                       className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                     />
@@ -226,7 +233,7 @@ export default function AppRunPage({ params }: PageProps) {
                       type={f.type === "number" ? "number" : "text"}
                       value={values[f.name] ?? ""}
                       onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
-                      placeholder={f.placeholder}
+                      placeholder={f.placeholder ?? (f.default !== undefined && f.default !== null && f.default !== "" ? String(f.default) : undefined)}
                       className="h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                     />
                   )}

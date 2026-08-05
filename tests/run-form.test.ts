@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   inputFieldsOf,
   initialRunValues,
+  placeholderFor,
   validateRunValues,
 } from "@/components/inputs/RunForm";
 import { humanizeFieldName } from "@/lib/vocabulary";
@@ -44,11 +45,32 @@ describe("inputFieldsOf", () => {
 });
 
 describe("initialRunValues", () => {
-  it("prefers a saved default", () => {
+  it("never pre-types a text default into the field", () => {
+    // A default is the engine's fallback for a blank answer, not something to
+    // put in the box, where it reads as an answer somebody already gave. It
+    // surfaces as the placeholder instead.
     const values = initialRunValues([
       { name: "tone", type: "string", default: "formal" },
     ]);
-    expect(values.tone).toBe("formal");
+    expect(values.tone).toBe("");
+  });
+
+  it("surfaces the default as the placeholder when none is authored", () => {
+    expect(placeholderFor({ name: "tone", type: "string", default: "formal" })).toBe("formal");
+    expect(
+      placeholderFor({ name: "tone", type: "string", default: "formal", placeholder: "e.g. warm" })
+    ).toBe("e.g. warm");
+    expect(placeholderFor({ name: "tone", type: "string" })).toBeUndefined();
+  });
+
+  it("seeds a true boolean default, the one kind a blank cannot carry", () => {
+    // A switch always shows a real state and false submits as a value, so the
+    // engine would never apply the default over it. Seeding is the only way a
+    // true default survives.
+    const values = initialRunValues([
+      { name: "flag", type: "boolean", default: true },
+    ]);
+    expect(values.flag).toBe(true);
   });
 
   it("starts each type at something the control can render", () => {

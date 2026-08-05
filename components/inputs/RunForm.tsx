@@ -38,28 +38,26 @@ export function inputFieldsOf(
   return (fields || []).filter((f) => f?.name);
 }
 
-/** Starting values for a form: saved defaults, else an empty value per type. */
+/**
+ * Starting values for a form. Every text field starts empty: a default is a
+ * fallback the engine applies to a blank answer, not something to pre-type
+ * into the box, where it reads as an answer somebody already gave. The
+ * default surfaces as the placeholder instead (see `placeholderFor`).
+ *
+ * Booleans are the exception. A switch shows a real state either way, and a
+ * false submission is a value, not a blank, so the engine would never apply
+ * the default over it. Seeding it is the only way a true default survives.
+ */
 export function initialRunValues(fields: InputField[]): RunValues {
   const values: RunValues = {};
 
   for (const field of fields) {
-    if (field.default !== undefined) {
-      values[field.name] = field.default;
-      continue;
-    }
-
     switch (field.type) {
-      case "number":
-        values[field.name] = "";
-        break;
       case "boolean":
-        values[field.name] = false;
+        values[field.name] = field.default !== undefined ? Boolean(field.default) : false;
         break;
       case "json":
         values[field.name] = {};
-        break;
-      case "file":
-        values[field.name] = "";
         break;
       default:
         values[field.name] = "";
@@ -67,6 +65,19 @@ export function initialRunValues(fields: InputField[]): RunValues {
   }
 
   return values;
+}
+
+/**
+ * What the empty field shows. An authored placeholder wins; otherwise the
+ * default doubles as one, so "leave it blank and this is what you get" is
+ * visible without being pre-typed.
+ */
+export function placeholderFor(field: InputField): string | undefined {
+  if (field.placeholder) return field.placeholder;
+  if (field.default !== undefined && field.default !== null && field.default !== "") {
+    return String(field.default);
+  }
+  return undefined;
 }
 
 /** Which required fields are still blank. Keyed by field name. */
@@ -165,7 +176,7 @@ export function RunForm({
                 id={id}
                 type="number"
                 value={value === undefined || value === null ? "" : String(value)}
-                placeholder={field.placeholder}
+                placeholder={placeholderFor(field)}
                 onChange={(e) =>
                   set(
                     field.name,
@@ -209,7 +220,7 @@ export function RunForm({
                   <Textarea
                     id={id}
                     value={text}
-                    placeholder={field.placeholder}
+                    placeholder={placeholderFor(field)}
                     onChange={(e) => set(field.name, e.target.value)}
                     aria-invalid={Boolean(error)}
                     rows={Math.min(14, Math.max(4, text.split("\n").length + 1))}
@@ -219,7 +230,7 @@ export function RunForm({
                   <Input
                     id={id}
                     value={text}
-                    placeholder={field.placeholder}
+                    placeholder={placeholderFor(field)}
                     onChange={(e) => set(field.name, e.target.value)}
                     aria-invalid={Boolean(error)}
                   />
