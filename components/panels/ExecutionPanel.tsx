@@ -17,26 +17,13 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import { ResultView } from "@/components/shared/ResultView";
 
-interface OutputModalData {
-  nodeName: string;
-  output: unknown;
-}
-
 export function ExecutionPanel() {
   const [isOpen, setIsOpen] = useState(true);
-  const [outputModal, setOutputModal] = useState<OutputModalData | null>(null);
   const { selectedNode, executionLogs, lastExecution, isExecuting } = useWorkflowStore();
 
   return (
@@ -100,22 +87,26 @@ export function ExecutionPanel() {
                               {log.duration}ms
                             </span>
                           )}
-                          {/* Expanding belongs on the card's own header row.
-                              Over the result it collided with the copy button. */}
-                          {log.output && (
+                          {/* Every output opens as its own page, one segment
+                              under the run it belongs to. The link needs the
+                              stored run, so it appears once the run has
+                              finished; the inline details below work
+                              throughout. */}
+                          {log.output && lastExecution?.id && (
                             <Button
+                              asChild
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 shrink-0"
-                              onClick={() =>
-                                setOutputModal({
-                                  nodeName: log.nodeName,
-                                  output: log.output,
-                                })
-                              }
-                              title="Open in a bigger view"
+                              className="h-6 px-1.5 shrink-0 gap-1 text-xs"
+                              title="Open this step's output as a page"
                             >
-                              <Maximize2 className="h-3 w-3" />
+                              <Link
+                                href={`/results/${lastExecution.id}/step/${log.nodeId}`}
+                                target="_blank"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View full page
+                              </Link>
                             </Button>
                           )}
                         </div>
@@ -176,7 +167,7 @@ export function ExecutionPanel() {
                             target="_blank"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            Open
+                            View full page
                           </Link>
                         </Button>
                       )}
@@ -265,23 +256,6 @@ export function ExecutionPanel() {
         </>
       )}
 
-      {/* Output Expand Modal */}
-      <Dialog open={outputModal !== null} onOpenChange={(open) => !open && setOutputModal(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Output: {outputModal?.nodeName}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            <ResultView value={outputModal?.output} className="max-h-[420px] overflow-auto" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOutputModal(null)}>
-              <X className="h-4 w-4 mr-1" />
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   CheckCircle,
   XCircle,
@@ -9,31 +10,18 @@ import {
   AlertTriangle,
   Lightbulb,
   AlertCircle,
-  Maximize2,
-  X,
+  ExternalLink,
   Play,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow";
 import { ResultView } from "@/components/shared/ResultView";
 
-interface OutputModalData {
-  nodeName: string;
-  output: unknown;
-}
-
 export function ExecutionDrawer() {
   const [isOpen, setIsOpen] = useState(false);
-  const [outputModal, setOutputModal] = useState<OutputModalData | null>(null);
   const { executionLogs, lastExecution, isExecuting } = useWorkflowStore();
 
   // Auto-open drawer when execution starts
@@ -209,22 +197,24 @@ export function ExecutionDrawer() {
                           {log.duration}ms
                         </span>
                       )}
-                      {/* Expanding belongs on the card's own header row. Over the
-                          result it collided with the copy button. */}
-                      {log.output && (
+                      {/* Every output opens as its own page, one segment under
+                          the run it belongs to. Needs the stored run, so it
+                          appears once the run has finished. */}
+                      {log.output && lastExecution?.id && (
                         <Button
+                          asChild
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 shrink-0"
-                          onClick={() =>
-                            setOutputModal({
-                              nodeName: log.nodeName,
-                              output: log.output,
-                            })
-                          }
-                          title="Open in a bigger view"
+                          className="h-6 px-1.5 shrink-0 gap-1 text-xs"
+                          title="Open this step's output as a page"
                         >
-                          <Maximize2 className="h-3 w-3" />
+                          <Link
+                            href={`/results/${lastExecution.id}/step/${log.nodeId}`}
+                            target="_blank"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View full page
+                          </Link>
                         </Button>
                       )}
                     </div>
@@ -272,20 +262,18 @@ export function ExecutionDrawer() {
                   <span className="font-semibold capitalize flex-1">
                     {lastExecution.status}
                   </span>
-                  {lastExecution.output && (
+                  {lastExecution.output && lastExecution.id && (
                     <Button
+                      asChild
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 shrink-0"
-                      onClick={() =>
-                        setOutputModal({
-                          nodeName: "Final result",
-                          output: lastExecution.output,
-                        })
-                      }
-                      title="Open in a bigger view"
+                      className="h-6 px-1.5 shrink-0 gap-1 text-xs"
+                      title="Open the result as a page"
                     >
-                      <Maximize2 className="h-3 w-3" />
+                      <Link href={`/results/${lastExecution.id}`} target="_blank">
+                        <ExternalLink className="h-3 w-3" />
+                        View full page
+                      </Link>
                     </Button>
                   )}
                 </div>
@@ -374,22 +362,6 @@ export function ExecutionDrawer() {
       </div>
 
       {/* Output Expand Modal */}
-      <Dialog open={outputModal !== null} onOpenChange={(open) => !open && setOutputModal(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Output: {outputModal?.nodeName}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            <ResultView value={outputModal?.output} className="max-h-[420px] overflow-auto" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOutputModal(null)}>
-              <X className="h-4 w-4 mr-1" />
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
