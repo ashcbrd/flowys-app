@@ -39,3 +39,10 @@ Thumbs.db
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Local agent working notes. Never published: they describe the build process
+# and this repository is public.
+CLAUDE.md
+AGENTS.md
+.claude/
+.superpowers/
