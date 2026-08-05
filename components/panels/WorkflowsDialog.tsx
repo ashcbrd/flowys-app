@@ -183,8 +183,19 @@ export function WorkflowsDialog({ open: controlledOpen, onOpenChange }: Workflow
     try {
       await Promise.all(workflowsToDelete.map((id) => api.workflows.delete(id)));
       setWorkflows((prev) => prev.filter((w) => !workflowsToDelete.includes(w.id)));
+
       // If one of these was open, take it off the canvas too.
+      const openId = useWorkflowStore.getState().currentWorkflowId;
+      const deletedTheOpenOne = !!openId && workflowsToDelete.includes(openId);
       forgetWorkflows(workflowsToDelete);
+
+      // Clearing the canvas is only half of it. The address bar still read
+      // /workflow/<deleted id>, so a reload asked the server for a workflow
+      // that no longer exists and the page fought to restore it. Leave the
+      // dead address behind.
+      if (deletedTheOpenOne) {
+        router.replace("/workflow");
+      }
       setSelectedWorkflows((prev) => {
         const newSet = new Set(prev);
         workflowsToDelete.forEach((id) => newSet.delete(id));

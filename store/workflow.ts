@@ -87,6 +87,12 @@ interface WorkflowState {
   forgetWorkflows: (ids: string[]) => void;
   createWorkflow: (workflow: GeneratedWorkflow) => void;
   hydrateFromStorage: () => Promise<void>;
+  /**
+   * Open the workflow named in the URL. Resolves `true` if it opened, `false`
+   * if it is gone, in which case every trace of it has been cleared and the
+   * caller should navigate away from the dead address.
+   */
+  openWorkflowFromUrl: (id: string) => Promise<boolean>;
   saveDraft: () => void;
   loadDraft: () => boolean;
   clearDraft: () => void;
@@ -170,6 +176,15 @@ const nodeLabels: Record<NodeType, string> = {
   webhook: "Webhook",
   integration: "Integration",
 };
+
+/**
+ * The hydrate currently running, if any.
+ *
+ * This lives outside the store on purpose. `isHydrated` cannot double as the
+ * re-entrancy guard any more, because it is deliberately false for the whole
+ * duration of a hydrate so that the editor does not start a competing load.
+ */
+let hydrationInFlight: Promise<void> | null = null;
 
 export const useWorkflowStore = create<WorkflowState>()(
   persist(
@@ -820,41 +835,85 @@ export const useWorkflowStore = create<WorkflowState>()(
         return get().workflowStatus;
       },
 
+      /**
+       * Restore the canvas from storage, once per page load.
+       *
+       * `isHydrated` used to be set on the first line here and the fetch below
+       * awaited afterwards. The editor gates its own URL load on that flag, so
+       * announcing it early let both run at once and whichever `set()` landed
+       * last won by luck. That race is how a workflow that had just been
+       * deleted came back on the canvas.
+       *
+       * The flag is now raised in `finally`, once nothing is in flight, and
+       * re-entrancy is guarded by the in-flight promise instead. A second
+       * caller awaits the first rather than starting a competing hydrate.
+       */
       hydrateFromStorage: async () => {
-        const { currentWorkflowId, draftWorkflow, isHydrated } = get();
-        if (isHydrated) return;
+        if (get().isHydrated) return;
+        if (hydrationInFlight) return hydrationInFlight;
 
-        set({ isHydrated: true });
+        const { currentWorkflowId, draftWorkflow } = get();
 
-        // Priority: Load saved workflow if exists, otherwise load draft
-        if (currentWorkflowId) {
+        hydrationInFlight = (async () => {
           try {
-            const workflow = await api.workflows.get(currentWorkflowId);
-            set({
-              workflow,
-              nodes: workflow.nodes as WorkflowNode[],
-              edges: workflow.edges,
-              workflowStatus: "saved",
-            });
-          } catch {
-            // The workflow is gone. Restoring an unrelated draft here is how a
-            // single stale step kept reappearing after a delete, so start clean.
-            set({
-              currentWorkflowId: null,
-              workflow: null,
-              nodes: [],
-              edges: [],
-              workflowStatus: "draft",
-              draftWorkflow: null,
-            });
+            if (currentWorkflowId) {
+              try {
+                const workflow = await api.workflows.get(currentWorkflowId);
+                set({
+                  workflow,
+                  nodes: workflow.nodes as WorkflowNode[],
+                  edges: workflow.edges,
+                  workflowStatus: "saved",
+                });
+              } catch {
+                // The workflow is gone. Restoring an unrelated draft here is how
+                // a single stale step kept reappearing after a delete, so start
+                // clean.
+                set({
+                  currentWorkflowId: null,
+                  workflow: null,
+                  nodes: [],
+                  edges: [],
+                  workflowStatus: "draft",
+                  draftWorkflow: null,
+                });
+              }
+            } else if (draftWorkflow && draftWorkflow.nodes.length > 0) {
+              set({
+                nodes: draftWorkflow.nodes,
+                edges: draftWorkflow.edges,
+                workflowStatus: "draft",
+              });
+            }
+          } finally {
+            set({ isHydrated: true });
+            hydrationInFlight = null;
           }
-        } else if (draftWorkflow && draftWorkflow.nodes.length > 0) {
-          // No saved workflow, load draft if exists
+        })();
+
+        return hydrationInFlight;
+      },
+
+      openWorkflowFromUrl: async (id: string) => {
+        try {
+          await get().loadWorkflow(id);
+          return true;
+        } catch {
+          // The address points at something that no longer exists. Clearing the
+          // canvas is not enough: the stored id and any draft written after the
+          // delete both have to go, or the next reload paints the ghost back.
           set({
-            nodes: draftWorkflow.nodes,
-            edges: draftWorkflow.edges,
+            workflow: null,
+            currentWorkflowId: null,
+            nodes: [],
+            edges: [],
+            selectedNode: null,
             workflowStatus: "draft",
+            draftWorkflow: null,
+            history: [],
+            historyIndex: -1,
           });
+          return false;
         }
       },
     }),
