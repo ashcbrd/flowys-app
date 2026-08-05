@@ -22,7 +22,7 @@ export function WorkflowEditor({ workflowId, versionId }: WorkflowEditorProps) {
   const hasInitialized = useRef(false);
   const hasLoadedWorkflow = useRef<string | null>(null);
   const {
-    loadWorkflow,
+    openWorkflowFromUrl,
     workflow,
     nodes,
     workflowStatus,
@@ -71,24 +71,25 @@ export function WorkflowEditor({ workflowId, versionId }: WorkflowEditorProps) {
         if (hasLoadedWorkflow.current === workflowId) return;
         hasLoadedWorkflow.current = workflowId;
 
-        try {
-          if (versionId) {
-            // Load a specific version
+        if (versionId) {
+          try {
             const version = await api.workflows.versions.get(workflowId, versionId);
             if (version.nodes && version.edges) {
               setNodes(version.nodes as Parameters<typeof setNodes>[0]);
               setEdges(version.edges);
             }
-            // Also load the workflow metadata
-            await loadWorkflow(workflowId);
-          } else {
-            // Load the current workflow
-            await loadWorkflow(workflowId);
+          } catch (error) {
+            console.error("Failed to load workflow version:", error);
           }
-        } catch (error) {
-          console.error("Failed to load workflow:", error);
+        }
+
+        // `openWorkflowFromUrl` clears the stored id and any draft when the
+        // workflow is gone, so the redirect below cannot be undone by the next
+        // hydrate. Catching the error here and only redirecting, as this used
+        // to, left both on disk and the deleted canvas came back on reload.
+        const opened = await openWorkflowFromUrl(workflowId);
+        if (!opened) {
           hasLoadedWorkflow.current = null;
-          // Redirect to new workflow if not found
           router.replace("/workflow");
         }
       } else {
@@ -98,7 +99,7 @@ export function WorkflowEditor({ workflowId, versionId }: WorkflowEditorProps) {
     };
 
     loadFromUrl();
-  }, [workflowId, versionId, loadWorkflow, router, setNodes, setEdges, isHydrated]);
+  }, [workflowId, versionId, openWorkflowFromUrl, router, setNodes, setEdges, isHydrated]);
 
   // Redirect to stored workflow on initial load (only if no URL param)
   useEffect(() => {
