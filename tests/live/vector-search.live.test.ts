@@ -52,7 +52,10 @@ live("Atlas $vectorSearch, against the real cluster", () => {
     await client.connect();
     chunks = client.db().collection("chunks");
 
-    const indexes = await chunks.listSearchIndexes().toArray();
+    const indexes = (await chunks.listSearchIndexes().toArray()) as {
+      name: string;
+      queryable?: boolean;
+    }[];
     const vector = indexes.find((i) => i.name === VECTOR_INDEX);
     if (!vector?.queryable) {
       throw new Error(
