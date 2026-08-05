@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, Webhook } from "@/lib/db";
+import { getAuthenticatedUser, userOwnsWorkflow } from "@/lib/auth-helpers";
 import mongoose from "mongoose";
 
 interface RouteParams {
@@ -9,6 +10,11 @@ interface RouteParams {
 // GET /api/webhooks/[id] - Get a specific webhook
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const webhook = await Webhook.findById(id).lean();
+    const webhook = await Webhook.findOne({ _id: id, userId: user.id }).lean();
 
     if (!webhook) {
       return NextResponse.json(
@@ -69,6 +75,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/webhooks/[id] - Update a webhook
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -95,11 +106,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       timeout
     } = body;
 
-    const webhook = await Webhook.findById(id);
+    const webhook = await Webhook.findOne({ _id: id, userId: user.id });
 
     if (!webhook) {
       return NextResponse.json(
         { error: "Webhook not found" },
+        { status: 404 }
+      );
+    }
+
+    // A reassigned workflow must also belong to the caller.
+    if (
+      workflowId !== undefined &&
+      workflowId &&
+      !(await userOwnsWorkflow(workflowId, user.id))
+    ) {
+      return NextResponse.json(
+        { error: "Workflow not found" },
         { status: 404 }
       );
     }
@@ -178,6 +201,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/webhooks/[id] - Delete a webhook
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -189,7 +217,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const webhook = await Webhook.findByIdAndDelete(id);
+    const webhook = await Webhook.findOneAndDelete({ _id: id, userId: user.id });
 
     if (!webhook) {
       return NextResponse.json(

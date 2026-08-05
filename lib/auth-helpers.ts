@@ -35,3 +35,25 @@ export async function requireWorkflowOwnership(workflowId: string, userId: strin
   }
   return workflow;
 }
+
+/**
+ * The ids of every workflow a user owns. Used to scope collections that hang
+ * off a workflow (schedules, webhooks, executions) to a single account without
+ * those models needing their own userId column.
+ */
+export async function getUserWorkflowIds(userId: string): Promise<string[]> {
+  const workflows = await Workflow.find({ userId }).select("_id").lean();
+  return workflows.map((w) => String(w._id));
+}
+
+/**
+ * True only if the given workflow exists and belongs to this user. A cheap
+ * ownership gate for records that reference a workflow by id.
+ */
+export async function userOwnsWorkflow(
+  workflowId: string,
+  userId: string
+): Promise<boolean> {
+  const workflow = await verifyWorkflowOwnership(workflowId, userId);
+  return workflow !== null;
+}

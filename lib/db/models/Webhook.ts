@@ -14,6 +14,7 @@ export type WebhookType = "incoming" | "outgoing";
 
 export interface IWebhook extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: string; // Owner of the webhook
   name: string;
   description?: string;
   type: WebhookType;
@@ -46,6 +47,7 @@ export interface IWebhook extends Document {
 
 const WebhookSchema = new Schema<IWebhook>(
   {
+    userId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
     type: {

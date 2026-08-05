@@ -198,7 +198,7 @@ function wire(...pairs: string[]) {
 
 // ---------------------------------------------------------------------------
 
-const SUPPORT_TRIAGE: WorkflowTemplate = {
+export const SUPPORT_TRIAGE: WorkflowTemplate = {
   id: "support-triage",
   name: "Triage a support email, end to end",
   description:
@@ -1269,6 +1269,10 @@ const TOPIC_PULSE: WorkflowTemplate = {
     ),
   },
 };
+
+// Named alias for the support-triage template used by tests and callers that
+// reference it directly rather than by id lookup.
+export const supportTriageTemplate = SUPPORT_TRIAGE;
 
 export const TEMPLATES: WorkflowTemplate[] = [
   SUPPORT_TRIAGE,
