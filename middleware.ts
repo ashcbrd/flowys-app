@@ -9,7 +9,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Protected routes that require authentication
-  const protectedRoutes = ["/workflow", "/integrations", "/settings", "/preview"];
+  const protectedRoutes = ["/workflow", "/integrations", "/settings", "/preview", "/knowledge"];
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -35,6 +35,7 @@ export const config = {
     "/integrations/:path*",
     "/settings/:path*",
     "/preview/:path*",
+    "/knowledge/:path*",
     "/login",
     "/signup",
   ],
