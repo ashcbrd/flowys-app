@@ -96,7 +96,7 @@ export default async function ResultPage({ params }: PageParams) {
   const steps = execution.logs ?? [];
 
   return (
-    <div className="min-h-screen bg-[var(--fy-mist)] print:bg-white">
+    <div className="min-h-screen bg-background">
       {/* Top bar: navigation and actions, never part of the document. */}
       <nav className="sticky top-0 z-40 border-b border-[var(--fy-line)] bg-white/70 backdrop-blur-xl print:hidden dark:bg-[#0b1120]/70">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3">
@@ -160,8 +160,9 @@ export default async function ResultPage({ params }: PageParams) {
           </p>
         </header>
 
-        {/* The sheet. Only the result lives on it. */}
-        <article className="rounded-2xl border border-[var(--fy-line)] bg-background px-6 py-8 shadow-[0_18px_44px_-28px_rgba(11,17,32,0.35)] print:border-0 print:px-0 print:shadow-none sm:px-10 sm:py-12">
+        {/* The document itself, straight on the page. A hairline overhead is
+            all that separates it from the run's facts. */}
+        <article className="border-t border-[var(--fy-line)] px-1 pt-10">
           {failed ? (
             <div className="space-y-4">
               <p className="text-[15px] leading-relaxed text-[var(--fy-ink)]">
@@ -189,17 +190,17 @@ export default async function ResultPage({ params }: PageParams) {
 
         {/* The trace, folded away. Provenance for whoever wants it. */}
         {steps.length > 0 && (
-          <section className="mt-10 print:hidden">
+          <section className="mt-14 border-t border-[var(--fy-line)] pt-8 print:hidden">
             <h2 className="fy-eyebrow px-1 text-[var(--fy-slate)]">
               How it was made
             </h2>
-            <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--fy-line)] bg-background">
+            <div className="mt-3">
               {steps.map((log, i) => (
                 <details
                   key={`${log.nodeId}-${i}`}
                   className="group border-b border-[var(--fy-line)] last:border-b-0"
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--fy-mist)] [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-lg px-1 py-3.5 transition-colors hover:bg-[var(--fy-mist)] [&::-webkit-details-marker]:hidden">
                     <span
                       className={
                         log.status === "completed"
@@ -218,7 +219,7 @@ export default async function ResultPage({ params }: PageParams) {
                       </span>
                     )}
                   </summary>
-                  <div className="border-t border-[var(--fy-line)] bg-[var(--fy-mist)]/60 px-5 py-4">
+                  <div className="mb-3 rounded-xl bg-[var(--fy-mist)]/60 px-5 py-4">
                     {log.error ? (
                       <p className="text-[13px] leading-relaxed text-red-600 dark:text-red-400">
                         {log.error}
