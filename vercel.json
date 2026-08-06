@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/knowledge/process",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/schedules/process",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/knowledge/process/route.ts": { "maxDuration": 300 },
+    "app/api/knowledge/documents/route.ts": { "maxDuration": 60 }
+  }
+}

@@ -3,6 +3,7 @@ import { connectToDatabase, KnowledgeDocument } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { getWorkspaceRole } from "@/lib/workspaces/service";
 import { deleteDocument } from "@/lib/knowledge/ingest";
+import { recordAudit } from "@/lib/workspaces/audit";
 import type { Role } from "@/lib/db/models/Membership";
 
 interface RouteParams {
@@ -70,6 +71,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         { _id: id },
         { acl: { mode: "workspace", allowedUserIds: undefined, allowedRoles: undefined } }
       );
+      await recordAudit({
+        workspaceId: loaded.document!.workspaceId,
+        actorId: user.id,
+        action: "document.access_changed",
+        targetId: id,
+        summary: `Opened "${loaded.document!.title}" to everyone in the workspace`,
+      });
       return NextResponse.json({ acl: { mode: "workspace" } });
     }
 
@@ -103,6 +111,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       { acl: { mode: "restricted", allowedUserIds, allowedRoles } }
     );
 
+    await recordAudit({
+      workspaceId: loaded.document!.workspaceId,
+      actorId: user.id,
+      action: "document.access_changed",
+      targetId: id,
+      summary: `Restricted "${loaded.document!.title}" to ${allowedUserIds.length} person(s) and ${allowedRoles.length} role(s)`,
+    });
+
     return NextResponse.json({ acl: { mode: "restricted", allowedUserIds, allowedRoles } });
   } catch (error) {
     console.error("Error updating document access:", error);
@@ -121,9 +137,58 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     if (loaded.error) return loaded.error;
 
     await deleteDocument(loaded.document!.workspaceId, id);
+    await recordAudit({
+      workspaceId: loaded.document!.workspaceId,
+      actorId: user.id,
+      action: "document.deleted",
+      targetId: id,
+      summary: `Deleted "${loaded.document!.title}"`,
+    });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting document:", error);
     return NextResponse.json({ error: "Failed to delete document" }, { status: 500 });
+  }
+}
+
+/**
+ * Re-index a document from new text.
+ *
+ * A document whose source changed had no path back into the index: the old
+ * chunks stayed and kept answering from a version nobody could see any more.
+ * This resets it to `pending` and lets the processor rebuild it, which also
+ * means a large re-index does not block the request that asked for it.
+ */
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+    const loaded = await loadManageable(id, user.id);
+    if (loaded.error) return loaded.error;
+
+    const body = await request.json().catch(() => null);
+    const text = typeof body?.text === "string" ? body.text : "";
+    if (!text.trim()) {
+      return NextResponse.json({ error: "There is no text to index" }, { status: 400 });
+    }
+
+    await KnowledgeDocument.updateOne(
+      { _id: id },
+      {
+        status: "pending",
+        pendingText: text,
+        attempts: 0,
+        chunkCount: 0,
+        meteredToUserId: user.id,
+        $unset: { error: "", claimedAt: "" },
+      }
+    );
+
+    return NextResponse.json({ documentId: id, status: "pending" });
+  } catch (error) {
+    console.error("Error re-indexing document:", error);
+    return NextResponse.json({ error: "Failed to re-index" }, { status: 500 });
   }
 }

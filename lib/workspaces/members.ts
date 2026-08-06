@@ -13,6 +13,7 @@
 import { connectToDatabase, User } from "@/lib/db";
 import { Membership, type Role } from "@/lib/db/models/Membership";
 import { Workspace } from "@/lib/db/models/Workspace";
+import { recordAudit } from "@/lib/workspaces/audit";
 
 export const ASSIGNABLE_ROLES: Role[] = ["admin", "member", "viewer"];
 
@@ -106,6 +107,13 @@ export async function addMember(
   }
 
   await Membership.create({ workspaceId, userId: user._id, role });
+  await recordAudit({
+    workspaceId,
+    actorId,
+    action: "member.added",
+    targetId: user._id,
+    summary: `Added ${user.email} as ${role}`,
+  });
 
   return { userId: user._id, email: user.email, name: user.name, role, joinedAt: new Date() };
 }
@@ -134,7 +142,20 @@ export async function changeRole(
     await assertNotLastOwner(workspaceId, targetUserId);
   }
 
+  // Captured before the write. Reading target.role afterwards happens to work
+  // because .lean() returns a copy, but that is a property of the driver
+  // rather than of this code, and it would silently report "from admin to
+  // admin" the day it stopped being true.
+  const previousRole = target.role;
+
   await Membership.updateOne({ workspaceId, userId: targetUserId }, { role });
+  await recordAudit({
+    workspaceId,
+    actorId,
+    action: "member.role_changed",
+    targetId: targetUserId,
+    summary: `Changed a member's role from ${previousRole} to ${role}`,
+  });
 }
 
 export async function removeMember(
@@ -154,7 +175,16 @@ export async function removeMember(
     await assertNotLastOwner(workspaceId, targetUserId);
   }
 
+  const removedRole = target.role;
+
   await Membership.deleteOne({ workspaceId, userId: targetUserId });
+  await recordAudit({
+    workspaceId,
+    actorId,
+    action: "member.removed",
+    targetId: targetUserId,
+    summary: `Removed a ${removedRole} from the workspace`,
+  });
 }
 
 /**
@@ -194,6 +224,12 @@ export async function createSharedWorkspace(userId: string, name: string): Promi
     personal: false,
   });
   await Membership.create({ workspaceId: workspace._id, userId, role: "owner" });
+  await recordAudit({
+    workspaceId: workspace._id,
+    actorId: userId,
+    action: "workspace.created",
+    summary: `Created the workspace "${trimmed}"`,
+  });
   return workspace._id;
 }
 

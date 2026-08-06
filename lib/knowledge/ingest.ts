@@ -31,7 +31,7 @@ export interface IngestTextOptions {
 export interface IngestResult {
   documentId: string;
   chunkCount: number;
-  status: "ready" | "failed";
+  status: "ready" | "failed" | "pending";
   error?: string;
 }
 
@@ -42,6 +42,16 @@ export interface IngestResult {
  * text; everything downstream of that is here, so the two share one code path
  * and one state machine.
  */
+/**
+ * Documents at or below this many chunks are indexed in the request.
+ *
+ * A pasted FAQ finishing while the user is still looking at the page is worth
+ * keeping. Anything larger is queued, because embedding hundreds of chunks
+ * takes longer than a serverless function is allowed to live, and the user
+ * would see a network error over a document that was indexing fine.
+ */
+export const INLINE_CHUNK_LIMIT = 40;
+
 export async function ingestText(options: IngestTextOptions): Promise<IngestResult> {
   const { workspaceId, knowledgeBaseId, title, text } = options;
 
@@ -49,6 +59,26 @@ export async function ingestText(options: IngestTextOptions): Promise<IngestResu
 
   const base = await KnowledgeBase.findOne({ _id: knowledgeBaseId, workspaceId }).lean();
   if (!base) throw new Error("Knowledge base not found in this workspace");
+
+  // Chunk first so the size decision is made on the real count rather than a
+  // guess from character length.
+  const planned = chunkText(text);
+
+  if (planned.length > INLINE_CHUNK_LIMIT) {
+    const queued = await KnowledgeDocument.create({
+      workspaceId,
+      knowledgeBaseId,
+      source: { type: "upload", ref: title },
+      title,
+      status: "pending",
+      acl: options.acl ?? { mode: base.defaultVisibility },
+      chunkCount: 0,
+      pendingText: text,
+      meteredToUserId: options.meterToUserId,
+    });
+
+    return { documentId: queued._id, chunkCount: 0, status: "pending" };
+  }
 
   const document = await KnowledgeDocument.create({
     workspaceId,
@@ -61,7 +91,7 @@ export async function ingestText(options: IngestTextOptions): Promise<IngestResu
   });
 
   try {
-    const pieces = chunkText(text);
+    const pieces = planned;
     if (pieces.length === 0) {
       // A document that extracted to nothing is a failure, not an empty
       // success. Marking it ready would mean it silently answers nothing.
@@ -183,7 +213,7 @@ const SEARCHABLE_POLL_MS = 1_000;
  * written and will become searchable shortly, so failing the whole ingest over
  * a slow index would be worse than a brief delay.
  */
-async function waitUntilSearchable(documentId: string): Promise<boolean> {
+export async function waitUntilSearchable(documentId: string): Promise<boolean> {
   const deadline = Date.now() + SEARCHABLE_TIMEOUT_MS;
 
   // A zero vector is a legitimate query here: we do not care what ranks first,
