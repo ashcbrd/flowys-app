@@ -35,8 +35,15 @@ export const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 /** Attempts before a document is failed for good rather than retried forever. */
 export const MAX_ATTEMPTS = 3;
 
-/** Documents handled per tick. Bounded so one tick cannot run past its own timeout. */
-const BATCH_SIZE = 3;
+/**
+ * Documents handled per tick.
+ *
+ * Two, not three, because the function's wall clock is the binding constraint:
+ * each document can spend up to 30 seconds waiting for the Atlas index alone,
+ * and a tick that overruns is killed mid-document. Anything left over is
+ * picked up by the next tick two minutes later.
+ */
+const BATCH_SIZE = 2;
 
 export interface ProcessResult {
   claimed: number;

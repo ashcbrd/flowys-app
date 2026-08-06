@@ -9,9 +9,5 @@
       "path": "/api/schedules/process",
       "schedule": "*/5 * * * *"
     }
-  ],
-  "functions": {
-    "app/api/knowledge/process/route.ts": { "maxDuration": 300 },
-    "app/api/knowledge/documents/route.ts": { "maxDuration": 60 }
-  }
+  ]
 }
