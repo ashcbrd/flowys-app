@@ -28,6 +28,7 @@ export default function KnowledgePage() {
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
 
@@ -50,29 +51,51 @@ export default function KnowledgePage() {
     load();
   }, [load]);
 
-  const addDocument = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitDocument = async (request: RequestInit) => {
     setAdding(true);
     setAddError("");
     try {
-      const res = await fetch("/api/knowledge/documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, text }),
-      });
+      const res = await fetch("/api/knowledge/documents", { method: "POST", ...request });
       const data = await res.json();
       if (!res.ok) {
         setAddError(data.error || "Could not add that document");
-      } else {
-        setTitle("");
-        setText("");
-        await load();
+        return false;
       }
+      await load();
+      return true;
     } catch {
       setAddError("Could not reach the server");
+      return false;
     } finally {
       setAdding(false);
     }
+  };
+
+  const addDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await submitDocument({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, text }),
+    });
+    if (ok) {
+      setTitle("");
+      setText("");
+    }
+  };
+
+  const addUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await submitDocument({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (ok) setUrl("");
+  };
+
+  const addFile = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    await submitDocument({ body: form });
   };
 
   const ask = async (e: React.FormEvent) => {
@@ -174,6 +197,36 @@ export default function KnowledgePage() {
           <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add a document
           </h2>
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <label className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground cursor-pointer hover:bg-muted/40">
+              <Plus className="w-4 h-4" />
+              {adding ? "Working..." : "Upload a file (.pdf, .docx, .txt, .md, .csv)"}
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt,.md,.markdown,.csv,.json,.log"
+                className="hidden"
+                disabled={adding}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) addFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+
+          <form onSubmit={addUrl} className="flex gap-2 mb-4">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Or a web page: https://..."
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <Button type="submit" variant="outline" disabled={!url.trim() || adding}>
+              Fetch
+            </Button>
+          </form>
+
           <form onSubmit={addDocument} className="space-y-3">
             <input
               value={title}

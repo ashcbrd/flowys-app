@@ -17,10 +17,19 @@ import { getWorkspaceRole } from "@/lib/workspaces/service";
 import { resolveAllowedDocumentIds } from "@/lib/workspaces/permissions";
 import { getEmbeddingProvider } from "@/lib/knowledge/embeddings";
 
-/** Must match the index name created by scripts/create-knowledge-indexes.mjs. */
+/** Must match the index names created by scripts/create-knowledge-indexes.mjs. */
 export const VECTOR_INDEX_NAME = "knowledge_vector";
+export const TEXT_INDEX_NAME = "knowledge_text";
 
 export const DEFAULT_TOP_K = 5;
+
+/**
+ * Reciprocal Rank Fusion constant. 60 is the value from the original RRF paper
+ * and works well when neither ranker's raw scores are calibrated against the
+ * other's, which is exactly the situation here: cosine similarity and BM25 are
+ * not comparable numbers, but ranks are.
+ */
+const RRF_K = 60;
 
 /**
  * How many vectors Atlas scans before ranking. The docs suggest 10 to 20 times
@@ -88,21 +97,21 @@ export async function retrieve(options: RetrieveOptions): Promise<RetrievedChunk
 
   const [queryVector] = await getEmbeddingProvider().embed([query]);
 
-  const results = await Chunk.aggregate<{
-    documentId: string;
-    knowledgeBaseId: string;
-    ord: number;
-    heading?: string;
-    text: string;
-    score: number;
-  }>([
+  // Hybrid: semantic and keyword legs run together, then Reciprocal Rank
+  // Fusion merges them by rank. Vector search alone misses exact terms, a
+  // product code, an error string, a person's name, because those embed close
+  // to nothing. Keyword search alone misses paraphrase. Each leg fetches more
+  // than topK so fusion has real overlap to work with.
+  const legDepth = Math.max(topK * 2, 10);
+
+  const vectorLeg = Chunk.aggregate<RawHit>([
     {
       $vectorSearch: {
         index: VECTOR_INDEX_NAME,
         path: "embedding",
         queryVector,
         numCandidates: Math.max(topK * CANDIDATE_MULTIPLIER, 100),
-        limit: topK,
+        limit: legDepth,
         filter: {
           workspaceId,
           // The allow-list goes inside the search, not after it.
@@ -110,20 +119,34 @@ export async function retrieve(options: RetrieveOptions): Promise<RetrievedChunk
         },
       },
     },
-    {
-      $project: {
-        _id: 0,
-        documentId: 1,
-        knowledgeBaseId: 1,
-        ord: 1,
-        heading: 1,
-        text: 1,
-        score: { $meta: "vectorSearchScore" },
-      },
-    },
+    { $project: RAW_HIT_PROJECTION },
   ]);
 
-  return results.map((hit) => ({
+  // The text leg is optional by design: Atlas free tiers cap search indexes,
+  // and production may only have the vector index. A missing index fails the
+  // aggregation, and that failure downgrades the search instead of breaking it.
+  const textLeg = Chunk.aggregate<RawHit>([
+    {
+      $search: {
+        index: TEXT_INDEX_NAME,
+        compound: {
+          must: [{ text: { query, path: "text" } }],
+          filter: [
+            { equals: { path: "workspaceId", value: workspaceId } },
+            { in: { path: "documentId", value: allowedIds } },
+          ],
+        },
+      },
+    },
+    { $limit: legDepth },
+    { $project: RAW_HIT_PROJECTION },
+  ]).catch(() => [] as RawHit[]);
+
+  const [vectorHits, textHits] = await Promise.all([vectorLeg, textLeg]);
+
+  const fused = fuseByReciprocalRank([vectorHits, textHits], topK);
+
+  return fused.map((hit) => ({
     documentId: hit.documentId,
     documentTitle: titles.get(hit.documentId) ?? "Untitled",
     knowledgeBaseId: hit.knowledgeBaseId,
@@ -132,6 +155,51 @@ export async function retrieve(options: RetrieveOptions): Promise<RetrievedChunk
     text: hit.text,
     score: hit.score,
   }));
+}
+
+interface RawHit {
+  documentId: string;
+  knowledgeBaseId: string;
+  ord: number;
+  heading?: string;
+  text: string;
+}
+
+const RAW_HIT_PROJECTION = {
+  _id: 0,
+  documentId: 1,
+  knowledgeBaseId: 1,
+  ord: 1,
+  heading: 1,
+  text: 1,
+} as const;
+
+/**
+ * Merge ranked lists with Reciprocal Rank Fusion: each list contributes
+ * 1 / (RRF_K + rank) for every item it ranked, and items sum across lists.
+ *
+ * Rank, not score, because cosine similarity and BM25 live on unrelated
+ * scales; comparing them directly would let whichever leg produces larger
+ * numbers win every argument. Exported for direct testing, since a subtle
+ * fusion bug does not fail, it just quietly returns worse passages.
+ */
+export function fuseByReciprocalRank(lists: RawHit[][], topK: number): (RawHit & { score: number })[] {
+  const byKey = new Map<string, RawHit & { score: number }>();
+
+  for (const list of lists) {
+    list.forEach((hit, rank) => {
+      const key = `${hit.documentId}:${hit.ord}`;
+      const entry = byKey.get(key);
+      const contribution = 1 / (RRF_K + rank + 1);
+      if (entry) {
+        entry.score += contribution;
+      } else {
+        byKey.set(key, { ...hit, score: contribution });
+      }
+    });
+  }
+
+  return [...byKey.values()].sort((a, b) => b.score - a.score).slice(0, topK);
 }
 
 /**

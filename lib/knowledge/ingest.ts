@@ -120,6 +120,43 @@ export async function ingestText(options: IngestTextOptions): Promise<IngestResu
   }
 }
 
+export interface IngestFileOptions {
+  workspaceId: string;
+  knowledgeBaseId: string;
+  filename: string;
+  buffer: Buffer;
+}
+
+/** Ingest an uploaded file: extract, then share the text pipeline. */
+export async function ingestFile(options: IngestFileOptions): Promise<IngestResult> {
+  const { extractFromFile } = await import("@/lib/knowledge/extract");
+  const extracted = await extractFromFile(options.filename, options.buffer);
+  return ingestText({
+    workspaceId: options.workspaceId,
+    knowledgeBaseId: options.knowledgeBaseId,
+    title: extracted.title ?? options.filename,
+    text: extracted.text,
+  });
+}
+
+export interface IngestUrlOptions {
+  workspaceId: string;
+  knowledgeBaseId: string;
+  url: string;
+}
+
+/** Ingest a web page: fetch behind the SSRF guard, then share the text pipeline. */
+export async function ingestUrl(options: IngestUrlOptions): Promise<IngestResult> {
+  const { extractFromUrl } = await import("@/lib/knowledge/extract");
+  const extracted = await extractFromUrl(options.url);
+  return ingestText({
+    workspaceId: options.workspaceId,
+    knowledgeBaseId: options.knowledgeBaseId,
+    title: extracted.title ?? options.url,
+    text: extracted.text,
+  });
+}
+
 /** How long to wait for the Atlas index to catch up before giving up on it. */
 const SEARCHABLE_TIMEOUT_MS = 30_000;
 const SEARCHABLE_POLL_MS = 1_000;

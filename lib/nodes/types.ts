@@ -1,10 +1,17 @@
-export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration";
+export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
 
 export interface NodeContext {
   nodeId: string;
   inputs: Record<string, unknown>;
   config: Record<string, unknown>;
   globalContext: Record<string, unknown>;
+  /**
+   * Who this run acts as: the workflow owner, on every trigger path. Scheduled
+   * and webhook-triggered runs have no session, so this cannot come from auth;
+   * the caller that loaded the workflow supplies it. Steps that touch
+   * user-scoped data (retrieval) fail closed when it is absent.
+   */
+  userId?: string;
 }
 
 export interface NodeResult {
@@ -85,6 +92,15 @@ export interface WebhookNodeConfig {
   secret?: string;
   timeout?: number;
   continueOnError?: boolean;
+}
+
+export interface RetrievalNodeConfig {
+  /** {{variable}} template resolved against inputs and global context. */
+  queryTemplate: string;
+  /** How many passages to hand to the next step. */
+  topK?: number;
+  /** Restrict to one knowledge base; defaults to everything the owner can see. */
+  knowledgeBaseId?: string;
 }
 
 export interface IntegrationNodeConfig {

@@ -78,7 +78,18 @@ const drop = process.argv.includes("--drop");
 const client = new MongoClient(uri);
 await client.connect();
 
-const chunks = client.db().collection("chunks");
+const db = client.db();
+
+// Atlas refuses to create a search index on a collection that does not exist,
+// and a fresh deployment has no chunks yet. Creating the collection explicitly
+// is a no-op when it is already there.
+const names = (await db.listCollections({ name: "chunks" }).toArray()).map((c) => c.name);
+if (!names.includes("chunks")) {
+  await db.createCollection("chunks");
+  console.log("created empty chunks collection");
+}
+
+const chunks = db.collection("chunks");
 const existing = await chunks.listSearchIndexes().toArray();
 const byName = new Map(existing.map((i) => [i.name, i]));
 
@@ -98,8 +109,25 @@ for (const index of [VECTOR_INDEX, TEXT_INDEX]) {
     }
   }
 
-  await chunks.createSearchIndex(index);
-  console.log(`${index.name}: created`);
+  try {
+    await chunks.createSearchIndex(index);
+    console.log(`${index.name}: created`);
+  } catch (error) {
+    // Atlas M0/M2/M5 clusters cap search indexes at three per cluster, across
+    // every database on it. The vector index is created first because
+    // retrieval cannot work at all without it; the text index only sharpens
+    // exact-term matches, and retrieval degrades to vector-only when it is
+    // missing. So a cap hit on the text index is a warning, not a failure.
+    if (index.name === TEXT_INDEX.name && /maximum number of FTS indexes/i.test(String(error.errmsg ?? error.message))) {
+      console.warn(
+        `${index.name}: SKIPPED, the cluster's search-index limit is reached.\n` +
+          `  Retrieval falls back to vector-only. To enable hybrid search, drop\n` +
+          `  an unused index on another database on this cluster, or upgrade the tier.`
+      );
+      continue;
+    }
+    throw error;
+  }
 }
 
 // Building is asynchronous. Report the real state rather than assuming.
@@ -109,7 +137,7 @@ for (let i = 0; i < 90; i++) {
   const wanted = now.filter((x) => x.name === VECTOR_INDEX.name || x.name === TEXT_INDEX.name);
   const line = wanted.map((x) => `${x.name}=${x.status}`).join("  ");
   process.stdout.write(`\r  ${line}   `);
-  if (wanted.length === 2 && wanted.every((x) => x.status === "READY")) break;
+  if (wanted.length > 0 && wanted.every((x) => x.status === "READY")) break;
   if (wanted.some((x) => x.status === "FAILED")) break;
   await new Promise((r) => setTimeout(r, 2000));
 }

@@ -8,6 +8,8 @@ export interface IChunk {
   documentId: string;
   ord: number;
   text: string;
+  /** The nearest heading above this chunk in the source; what a citation shows. */
+  heading?: string;
   embedding: number[];
   tokens: number;
   createdAt: Date;
@@ -22,6 +24,10 @@ const ChunkSchema = new Schema<IChunk>(
     documentId: { type: String, required: true, index: true },
     ord: { type: Number, required: true },
     text: { type: String, required: true },
+    // Without this line mongoose's strict mode silently dropped the heading on
+    // insert, and citations lost their section names while every test that
+    // wrote through the raw driver kept passing.
+    heading: { type: String },
     embedding: { type: [Number], default: [] },
     tokens: { type: Number, default: 0 },
   },
