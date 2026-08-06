@@ -124,6 +124,24 @@
   --fy-blue: #0a6cff;
   --fy-blue-deep: #003db0;
   --fy-cyan: #5ccdff;
+
+  /* The landing site's neutral ramp, ported verbatim. The app's own chrome uses
+     the shadcn tokens; these exist so the pages a visitor meets before they are
+     signed in, sign in and sign up, are the same surface as the marketing site
+     rather than a near miss of it. */
+  --fy-ink: #0b1120;
+  --fy-ink-2: #1e293b;
+  --fy-slate: #55637a;
+  --fy-mist: #f6f8fb;
+  --fy-line: #e4e9f0;
+}
+
+.dark {
+  --fy-ink: #f8fafc;
+  --fy-ink-2: #e2e8f0;
+  --fy-slate: #94a3b8;
+  --fy-mist: #0d1424;
+  --fy-line: #1e293b;
 }
 
 /* Headings and step names. Tight tracking is what reads as considered. */
@@ -190,6 +208,72 @@
 /* Primary actions are pills, as on the landing site. */
 .fy-pill {
   border-radius: 9999px;
+}
+
+/* ---------------------------------------------------------------------------
+   Marketing-strength treatment, for the signed-out pages only.
+
+   `.fy-display` above is deliberately denser than the landing site's, because
+   step names and panel headings sit in tight rows and a marketing headline
+   weight would shout in a toolbar. Sign in and sign up are not that: they are
+   the seam between the marketing site and the product, and a visitor arrives
+   at them straight from a page set at 800/-0.045em. These classes carry that
+   exact weight so the seam is invisible.
+--------------------------------------------------------------------------- */
+
+.fy-display-hero {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.fy-eyebrow-hero {
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Hero light. One wide, soft source rather than scattered blobs, at the
+   landing site's exact radii and opacities. */
+.fy-hero-light {
+  background:
+    radial-gradient(60rem 30rem at 50% -6rem, rgba(10, 108, 255, 0.16), transparent 70%),
+    radial-gradient(36rem 22rem at 82% 4rem, rgba(92, 205, 255, 0.12), transparent 70%);
+}
+
+.dark .fy-hero-light {
+  background:
+    radial-gradient(60rem 30rem at 50% -6rem, rgba(10, 108, 255, 0.3), transparent 70%),
+    radial-gradient(36rem 22rem at 82% 4rem, rgba(92, 205, 255, 0.16), transparent 70%);
+}
+
+/* Text arrives from slightly soft to sharp, which reads as focus rather than
+   movement. Staggered with inline animationDelay at the call site. */
+@keyframes fy-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.fy-rise {
+  animation: fy-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Anyone who has asked for less motion gets the end state immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .fy-rise {
+    animation: none;
+  }
 }
 
 /* A side panel owns the right edge while it is open, so the floating Flux

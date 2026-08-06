@@ -4,9 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { ArrowRight, Loader2, Sparkles, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AlertCircle } from "lucide-react";
+import { AuthShell, AuthField, AuthSubmit } from "@/components/auth/AuthShell";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -60,125 +59,75 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative">
-      <div className="fy-light pointer-events-none absolute inset-0" />
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">Flowys</span>
+    <AuthShell
+      eyebrow="Free to start"
+      title={
+        <>
+          <span className="block [text-wrap:balance]">Run your first</span>
+          <span className="block [text-wrap:balance] text-[var(--fy-slate)]">
+            workflow in minutes.
+          </span>
+        </>
+      }
+      subtitle="Six ready made workflows are waiting. Nothing to install, and no card."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-[var(--fy-ink)] underline-offset-4 hover:underline"
+          >
+            Sign in
           </Link>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Link
-              href="/"
-              className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-            >
-              Back to home
-            </Link>
-          </div>
-        </div>
-      </nav>
+        </>
+      }
+    >
+      <form className="space-y-5" onSubmit={handleSignup}>
+        <AuthField
+          id="name"
+          label="Name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
+        />
 
-      <section className="pt-32 pb-20 px-6 min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">Create your account</h1>
-            <p className="text-lg text-muted-foreground">
-              Start building workflows in minutes.
-            </p>
-          </div>
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+        />
 
-          <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
-            <form className="space-y-5" onSubmit={handleSignup}>
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Name <span className="text-muted-foreground font-normal">(optional)</span>
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-11 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                  autoComplete="name"
-                />
-              </div>
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          minLength={8}
+          required
+          hint="At least 8 characters."
+        />
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-11 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                  autoComplete="email"
-                  required
-                />
-              </div>
+        {error && (
+          <p
+            className="flex items-start gap-2 rounded-xl bg-red-500/8 px-3.5 py-3 text-[13px] text-red-600 dark:text-red-400"
+            role="alert"
+          >
+            <AlertCircle className="mt-px h-4 w-4 shrink-0" />
+            {error}
+          </p>
+        )}
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-11 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                  autoComplete="new-password"
-                  minLength={8}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">At least 8 characters.</p>
-              </div>
-
-              {error && (
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                  {error}
-                </p>
-              )}
-
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="fy-pill w-full h-11 text-base font-semibold"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create account
-                  </>
-                )}
-              </Button>
-            </form>
-          </div>
-
-          <div className="text-center mt-8">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1 text-foreground font-medium hover:underline"
-              >
-                Sign in
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+        <AuthSubmit loading={isLoading} loadingLabel="Creating your account...">
+          Create account
+        </AuthSubmit>
+      </form>
+    </AuthShell>
   );
 }
