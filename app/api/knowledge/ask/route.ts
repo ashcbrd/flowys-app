@@ -65,12 +65,16 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    // executePrompt auto-parses JSON-looking replies, and models sometimes wrap
+    // an answer as {"response": "..."} unprompted. Unwrap the usual key names
+    // before falling back to raw JSON, or the user reads braces.
+    const record = response as Record<string, unknown>;
     const answer =
       typeof response === "string"
         ? response
-        : typeof (response as { content?: string })?.content === "string"
-          ? (response as { content: string }).content
-          : JSON.stringify(response);
+        : [record?.content, record?.response, record?.text, record?.answer].find(
+            (v): v is string => typeof v === "string"
+          ) ?? JSON.stringify(response);
 
     return NextResponse.json({
       answer,
