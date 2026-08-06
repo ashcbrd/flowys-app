@@ -84,7 +84,7 @@ workflow-app/
 │   └── use-workflow.ts
 ├── types/
 │   └── workflow.ts           # TypeScript types
-└── middleware.ts             # Auth middleware
+└── proxy.ts                  # Auth boundary (was middleware.ts)
 ```
 
 ## Getting Started
