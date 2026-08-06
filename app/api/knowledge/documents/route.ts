@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         buffer: Buffer.from(await file.arrayBuffer()),
         meterToUserId: user.id,
       });
-      return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
+      return NextResponse.json(result, { status: statusFor(result.status) });
     }
 
     const body = await request.json().catch(() => null);
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         url: body.url.trim(),
         meterToUserId: user.id,
       });
-      return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
+      return NextResponse.json(result, { status: statusFor(result.status) });
     }
 
     // Pasted text.
@@ -121,9 +121,7 @@ export async function POST(request: NextRequest) {
       meterToUserId: user.id,
     });
 
-    // A failed ingest is a real answer, not a server error: the document row
-    // exists and carries the reason, which is what the UI shows.
-    return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
+    return NextResponse.json(result, { status: statusFor(result.status) });
   } catch (error) {
     console.error("Error adding document:", error);
     const message = error instanceof Error ? error.message : "Failed to add document";
@@ -135,6 +133,23 @@ export async function POST(request: NextRequest) {
       );
     return NextResponse.json({ error: message }, { status: userFacing ? 422 : 500 });
   }
+}
+
+/**
+ * Three outcomes, three codes.
+ *
+ * `pending` is a success: the document was accepted and a worker will index
+ * it. It previously shared the failure branch and answered 422, so the page
+ * told the user "Could not add that document" about a document that had been
+ * queued perfectly well, and then listed it below.
+ *
+ * A failed ingest is still not a server error: the row exists and carries the
+ * reason, which is what the UI shows.
+ */
+function statusFor(status: "ready" | "pending" | "failed"): number {
+  if (status === "ready") return 201;
+  if (status === "pending") return 202;
+  return 422;
 }
 
 async function resolveKnowledgeBase(value: unknown, workspaceId: string): Promise<string> {
