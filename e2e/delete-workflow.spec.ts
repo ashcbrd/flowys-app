@@ -80,19 +80,17 @@ async function runWorkflow(page: Page) {
 }
 
 async function deleteWorkflow(page: Page, name: RegExp) {
-  // After a run the execution drawer sits over the header and swallows the
-  // click. Close it the way a person would, with its own X, rather than forcing
-  // the click through: a forced click would also pass if the drawer were
-  // genuinely trapping a user.
-  //
-  // Escape does not close it. The drawer is hand-rolled rather than a Radix
-  // dialog, so it has no key handling at all.
-  // The heading reads "Running" mid-run and "Execution" once it stops, so match
-  // either. The X is a sibling of the heading's parent, not of the heading.
-  const drawerHeading = page.getByRole("heading", { name: /^(Execution|Running)$/ });
-  if (await drawerHeading.count()) {
-    await drawerHeading.locator("../..").getByRole("button").last().click();
-    await expect(drawerHeading).toBeHidden({ timeout: 10_000 });
+  // After a run the execution drawer's backdrop covers the header and swallows
+  // the click. Close it the way a person can: clicking the backdrop closes the
+  // drawer. Two things make asserting on the drawer itself wrong: it stays
+  // mounted when closed (translated off-screen, which Playwright still counts
+  // as visible), and Escape does nothing because it is hand-rolled rather than
+  // a dialog. The backdrop, by contrast, is unmounted on close, so waiting for
+  // it to detach is a real signal.
+  const backdrop = page.locator("div.fixed.inset-0.bg-black\\/20");
+  if (await backdrop.count()) {
+    await backdrop.click();
+    await expect(backdrop).toHaveCount(0, { timeout: 10_000 });
   }
 
   // The overflow menu trigger carries no accessible name; it is the last
@@ -107,7 +105,7 @@ async function deleteWorkflow(page: Page, name: RegExp) {
   await page.getByRole("button", { name: "Delete Workflow" }).first().click();
   await page.getByRole("button", { name: /^delete$/i }).last().click();
 
-  await expect(page.getByText(/deleted successfully/i)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/deleted successfully/i).first()).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe("deleting a workflow", () => {
