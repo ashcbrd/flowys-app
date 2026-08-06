@@ -100,3 +100,22 @@ export {
 } from "./models/Chunk";
 
 export { AuditLog, type IAuditLog, type AuditAction } from "./models/AuditLog";
+
+export {
+  AppListing,
+  type IAppListing,
+  type IAppAudience,
+  type IAppSettings,
+  type AppStatus,
+  type AudienceMode,
+} from "./models/AppListing";
+
+export {
+  AppVersion,
+  type IAppVersion,
+} from "./models/AppVersion";
+
+export {
+  AppRun,
+  type IAppRun,
+} from "./models/AppRun";
