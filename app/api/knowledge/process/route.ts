@@ -35,5 +35,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Convenience for cron services that can only issue GETs. */
-export const GET = POST;
+/**
+ * Vercel Cron issues GETs, and many external cron services cannot send
+ * anything else. Declared as its own function rather than `export const GET =
+ * POST`: aliasing one handler to two exports does not survive the route
+ * analysis, and the endpoint answers 400 to everything.
+ */
+export async function GET(request: NextRequest) {
+  return POST(request);
+}
