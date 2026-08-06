@@ -51,16 +51,35 @@ export default function KnowledgePage() {
     load();
   }, [load]);
 
-  // A queued document is indexed by a background worker, so the page has to
-  // find out on its own that it finished. Polling stops as soon as nothing is
-  // in flight, so an idle page makes no requests.
+  // A queued document is indexed out of band, so the page has to both drive
+  // the work and find out when it finished.
+  //
+  // Driving it from here rather than from a cron is deliberate: this plan caps
+  // cron frequency far below what indexing needs, and the person who queued the
+  // document is sitting on this page anyway. /api/knowledge/process stays
+  // callable by a scheduler, so this is the trigger rather than the only one.
+  //
+  // Polling stops the moment nothing is in flight, so an idle page is silent.
   const anyInFlight = documents.some(
     (d) => d.status === "pending" || d.status === "processing"
   );
   useEffect(() => {
     if (!anyInFlight) return;
-    const timer = setInterval(load, 4000);
-    return () => clearInterval(timer);
+
+    let cancelled = false;
+    const tick = async () => {
+      // Kick the worker, then read the result. Failures are ignored on purpose:
+      // a tick that could not run is retried by the next one two seconds later.
+      await fetch("/api/knowledge/process", { method: "POST" }).catch(() => {});
+      if (!cancelled) await load();
+    };
+
+    tick();
+    const timer = setInterval(tick, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [anyInFlight, load]);
 
   const submitDocument = async (request: RequestInit) => {
