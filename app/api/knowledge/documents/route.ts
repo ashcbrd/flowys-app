@@ -38,7 +38,16 @@ export async function GET() {
 
 const MAX_CHARS = 200_000;
 
-/** Add a document: chunk it, embed it, index it. */
+/**
+ * Add a document. Three sources, one pipeline:
+ *
+ *   pasted text     -> JSON  { title, text }
+ *   a web page      -> JSON  { url }
+ *   an uploaded file -> multipart/form-data with a `file` field
+ *
+ * All three end in `ingestText`, so chunking, embedding, indexing and the
+ * ready/failed state machine behave identically regardless of source.
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -46,7 +55,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await connectToDatabase();
+    const workspaceId = await getOrCreatePersonalWorkspace(user.id);
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    // Uploaded file.
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: "No file arrived" }, { status: 400 });
+      }
+
+      const knowledgeBaseId = await resolveKnowledgeBase(form.get("knowledgeBaseId"), workspaceId);
+      const { ingestFile } = await import("@/lib/knowledge/ingest");
+
+      const result = await ingestFile({
+        workspaceId,
+        knowledgeBaseId,
+        filename: file.name,
+        buffer: Buffer.from(await file.arrayBuffer()),
+      });
+      return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
+    }
+
     const body = await request.json().catch(() => null);
+    const knowledgeBaseId = await resolveKnowledgeBase(body?.knowledgeBaseId, workspaceId);
+
+    // A web page.
+    if (typeof body?.url === "string" && body.url.trim()) {
+      const { ingestUrl } = await import("@/lib/knowledge/ingest");
+      const result = await ingestUrl({ workspaceId, knowledgeBaseId, url: body.url.trim() });
+      return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
+    }
+
+    // Pasted text.
     const title = typeof body?.title === "string" ? body.title.trim() : "";
     const text = typeof body?.text === "string" ? body.text : "";
 
@@ -63,13 +107,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-    const workspaceId = await getOrCreatePersonalWorkspace(user.id);
-    const knowledgeBaseId =
-      typeof body?.knowledgeBaseId === "string" && body.knowledgeBaseId
-        ? body.knowledgeBaseId
-        : await getOrCreateDefaultKnowledgeBase(workspaceId);
-
     const result = await ingestText({ workspaceId, knowledgeBaseId, title, text });
 
     // A failed ingest is a real answer, not a server error: the document row
@@ -78,6 +115,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error adding document:", error);
     const message = error instanceof Error ? error.message : "Failed to add document";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Extraction and vetting failures are user-actionable messages, not 500s.
+    const userFacing =
+      error instanceof Error &&
+      /cannot be read|not a valid web address|private network|answered \d+|too large|is empty|over \d+ MB|No text could be read|No readable text/.test(
+        error.message
+      );
+    return NextResponse.json({ error: message }, { status: userFacing ? 422 : 500 });
   }
+}
+
+async function resolveKnowledgeBase(value: unknown, workspaceId: string): Promise<string> {
+  return typeof value === "string" && value
+    ? value
+    : getOrCreateDefaultKnowledgeBase(workspaceId);
 }

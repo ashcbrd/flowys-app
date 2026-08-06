@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           nodeCount: nodesToExecute.length,
         });
 
-        const executor = createExecutor(nodesToExecute, edgesToExecute);
+        const executor = createExecutor(nodesToExecute, edgesToExecute, { userId: user.id });
 
         // Execute with real-time updates
         const result = await executor.execute(body?.input || {}, (log, allLogs) => {

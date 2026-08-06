@@ -17,6 +17,7 @@ import { InputNode } from "@/components/nodes/InputNode";
 import { ApiNode } from "@/components/nodes/ApiNode";
 import { AiNode } from "@/components/nodes/AiNode";
 import { LogicNode } from "@/components/nodes/LogicNode";
+import { RetrievalNode } from "@/components/nodes/RetrievalNode";
 import { OutputNode } from "@/components/nodes/OutputNode";
 import { IntegrationNode } from "@/components/nodes/IntegrationNode";
 import { WebhookNode } from "@/components/nodes/WebhookNode";
@@ -32,6 +33,7 @@ const nodeTypes = {
   output: OutputNode,
   integration: IntegrationNode,
   webhook: WebhookNode,
+  retrieval: RetrievalNode,
 };
 
 function WorkflowCanvasInner() {

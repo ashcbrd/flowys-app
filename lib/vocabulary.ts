@@ -185,6 +185,17 @@ export function labelFor(terms: Term[], value: string | undefined): string {
   return terms.find((t) => t.value === value)?.label ?? value;
 }
 
+/** The document-search step, in plain words. Never "vector", "embedding" or "RAG". */
+export const RETRIEVAL_TERMS = {
+  stepName: "Your docs",
+  configTitle: "Search your documents",
+  queryLabel: "What should it look for?",
+  queryHelp:
+    "Plain words are fine, and {{placeholders}} pull in values from earlier steps.",
+  topKLabel: "How many passages to pass along",
+  emptyResult: "Nothing in your documents matched.",
+} as const;
+
 export function helpFor(terms: Term[], value: string | undefined): string | undefined {
   if (!value) return undefined;
   return terms.find((t) => t.value === value)?.help;

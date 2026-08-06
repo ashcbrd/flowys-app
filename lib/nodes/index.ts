@@ -5,6 +5,7 @@ import { LogicNodeHandler } from "./logic";
 import { OutputNodeHandler } from "./output";
 import { WebhookNodeHandler } from "./webhook";
 import { IntegrationNodeHandler } from "./integration";
+import { RetrievalNodeHandler } from "./retrieval";
 import type { NodeHandler, NodeType, NodeContext, NodeResult } from "./types";
 
 export type {
@@ -19,6 +20,7 @@ export type {
   OutputNodeConfig,
   WebhookNodeConfig,
   IntegrationNodeConfig,
+  RetrievalNodeConfig,
 } from "./types";
 
 const handlers: Record<NodeType, NodeHandler> = {
@@ -29,6 +31,7 @@ const handlers: Record<NodeType, NodeHandler> = {
   output: new OutputNodeHandler(),
   webhook: new WebhookNodeHandler(),
   integration: new IntegrationNodeHandler(),
+  retrieval: new RetrievalNodeHandler(),
 };
 
 export function getNodeHandler(type: NodeType): NodeHandler {
