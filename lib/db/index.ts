@@ -65,8 +65,36 @@ export {
 } from "./models/User";
 
 export {
+  Workspace,
+  type IWorkspace,
+} from "./models/Workspace";
+
+export {
+  Membership,
+  type IMembership,
+  type Role,
+} from "./models/Membership";
+
+export {
   RateLimit,
   type IRateLimit,
   checkRateLimit,
   getRateLimitStatus,
 } from "./models/RateLimit";
+
+export {
+  KnowledgeBase,
+  type IKnowledgeBase,
+} from "./models/KnowledgeBase";
+
+export {
+  KnowledgeDocument,
+  type IKnowledgeDocument,
+  type IDocumentAcl,
+  type DocumentStatus,
+} from "./models/KnowledgeDocument";
+
+export {
+  Chunk,
+  type IChunk,
+} from "./models/Chunk";

@@ -2,7 +2,7 @@ import mongoose, { Schema, Model } from "mongoose";
 
 export interface NodeData {
   id: string;
-  type: "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration";
+  type: "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
   position: { x: number; y: number };
   data: {
     label: string;
@@ -75,7 +75,7 @@ const NodeDataSchema = new Schema<NodeData>(
     id: { type: String, required: true },
     type: {
       type: String,
-      enum: ["input", "api", "ai", "logic", "output", "webhook", "integration"],
+      enum: ["input", "api", "ai", "logic", "output", "webhook", "integration", "retrieval"],
       required: true,
     },
     position: {
