@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 /**
  * The auth boundary.
  *
- * middleware.ts is the only thing standing between an anonymous visitor and
+ * proxy.ts is the only thing standing between an anonymous visitor and
  * every workspace in the database. It is also the easiest file in the codebase
  * to break silently: adding a route and forgetting to list it in
  * `protectedRoutes` produces no error, no failing unit test and no visible
@@ -12,7 +12,7 @@ import { test, expect } from "@playwright/test";
  * These tests fail the moment that happens.
  */
 
-// Kept deliberately in sync with `protectedRoutes` in middleware.ts. If you add
+// Kept deliberately in sync with `protectedRoutes` in proxy.ts. If you add
 // a route there, add it here. The pair is the point.
 const PROTECTED_ROUTES = [
   "/workflow",

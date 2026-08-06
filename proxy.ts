@@ -1,3 +1,10 @@
+/**
+ * The auth boundary.
+ *
+ * Named proxy.ts rather than middleware.ts: Next 16 deprecated the middleware
+ * file convention and warns on every build. The contract is otherwise
+ * identical, matcher included, so this is a rename rather than a rewrite.
+ */
 import NextAuth from "next-auth";
 import authConfig from "@/lib/auth.config";
 import { NextResponse } from "next/server";
