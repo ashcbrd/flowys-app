@@ -24,6 +24,7 @@ import { ConditionBuilder } from "@/components/inputs/ConditionBuilder";
 import { PresetPicker } from "@/components/inputs/PresetPicker";
 import { availableFieldsFor, itemFieldsFor, type AvailableField } from "@/lib/utils/fields";
 import { INTEGRATIONS_ENABLED, COMING_SOON_LABEL } from "@/lib/features";
+import { RETRIEVAL_TERMS } from "@/lib/vocabulary";
 import {
   FIELD_TYPES,
   SCHEMA_TYPES,
@@ -198,6 +199,14 @@ export function NodeConfigPanel() {
         )}
         {selectedNode.type === "webhook" && (
           <WebhookNodeConfig
+            config={pendingConfig}
+            onChange={handleConfigChange}
+            fields={availableFields}
+            itemFields={itemFields}
+          />
+        )}
+        {selectedNode.type === "retrieval" && (
+          <RetrievalNodeConfigSection
             config={pendingConfig}
             onChange={handleConfigChange}
             fields={availableFields}
@@ -1611,6 +1620,54 @@ function WebhookNodeConfig({ config, onChange, fields = [] }: ConfigProps) {
           Continue workflow on error
         </Label>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Config for the document-search step. Deliberately two controls. The step's
+ * whole job is "look this up in my documents", and every extra knob here is a
+ * question a non-technical person cannot answer.
+ */
+function RetrievalNodeConfigSection({ config, onChange, fields: upstreamFields = [] }: ConfigProps) {
+  const queryTemplate = (config.queryTemplate as string) ?? "";
+  const topK = (config.topK as number) ?? 5;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>{RETRIEVAL_TERMS.queryLabel}</Label>
+        <TemplateInput
+          value={queryTemplate}
+          onChange={(value) => onChange("queryTemplate", value)}
+          fields={upstreamFields}
+          placeholder="e.g. the customer's question: {{enquiry}}"
+          multiline
+          rows={3}
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{RETRIEVAL_TERMS.queryHelp}</p>
+      </div>
+
+      <div>
+        <Label>{RETRIEVAL_TERMS.topKLabel}</Label>
+        <Input
+          type="number"
+          min={1}
+          max={20}
+          value={topK}
+          onChange={(e) => onChange("topK", Number(e.target.value) || 5)}
+          className="mt-1 w-24"
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Searches the documents on your{" "}
+        <Link href="/knowledge" className="underline" target="_blank">
+          documents page
+        </Link>
+        . The step hands the best passages to whatever comes next, usually an AI step.
+      </p>
     </div>
   );
 }

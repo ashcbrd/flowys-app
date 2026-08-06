@@ -25,7 +25,7 @@ export interface WorkflowVersion {
 
 export interface NodeData {
   id: string;
-  type: "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration";
+  type: "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
   position: { x: number; y: number };
   data: {
     label: string;

@@ -33,10 +33,13 @@ export class WorkflowExecutor {
   private adjacencyList: Map<string, string[]>;
   private inDegree: Map<string, number>;
   private nodeMap: Map<string, NodeData>;
+  /** The workflow owner; see NodeContext.userId for why this is explicit. */
+  private userId?: string;
 
-  constructor(nodes: NodeData[], edges: EdgeData[]) {
+  constructor(nodes: NodeData[], edges: EdgeData[], options: { userId?: string } = {}) {
     this.nodes = nodes;
     this.edges = edges;
+    this.userId = options.userId;
     this.adjacencyList = new Map();
     this.inDegree = new Map();
     this.nodeMap = new Map();
@@ -445,6 +448,7 @@ export class WorkflowExecutor {
           inputs: nodeInputs,
           config: node.data.config,
           globalContext: context.globalContext,
+          userId: this.userId,
         });
 
         if (!result.success) {
@@ -525,7 +529,8 @@ export class WorkflowExecutor {
 
 export function createExecutor(
   nodes: NodeData[],
-  edges: EdgeData[]
+  edges: EdgeData[],
+  options: { userId?: string } = {}
 ): WorkflowExecutor {
-  return new WorkflowExecutor(nodes, edges);
+  return new WorkflowExecutor(nodes, edges, options);
 }

@@ -2,6 +2,7 @@
 
 import { DragEvent, useState } from "react";
 import {
+  BookOpenText,
   FileInput,
   Globe,
   Sparkles,
@@ -57,6 +58,14 @@ const nodeTypes: DockItem[] = [
     icon: <Sparkles className="h-5 w-5" />,
     color: "bg-violet-500",
     gradient: "from-violet-400 to-violet-600",
+  },
+  {
+    type: "retrieval",
+    label: "Your docs",
+    description: "Search the documents you've added and hand the best passages to the next step",
+    icon: <BookOpenText className="h-5 w-5" />,
+    color: "bg-teal-500",
+    gradient: "from-teal-400 to-teal-600",
   },
   {
     type: "logic",

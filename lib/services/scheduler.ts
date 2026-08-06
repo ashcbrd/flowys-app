@@ -121,7 +121,8 @@ export async function executeScheduledWorkflow(scheduleId: string): Promise<{
     });
 
     // Execute the workflow
-    const executor = createExecutor(workflow.nodes, workflow.edges);
+    // Scheduled runs act as the workflow owner; there is no session to ask.
+    const executor = createExecutor(workflow.nodes, workflow.edges, { userId: workflow.userId });
     const result = await executor.execute(schedule.input || {});
 
     // Update execution record

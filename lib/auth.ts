@@ -54,6 +54,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user.id) {
         const { getOrCreateCredits } = await import("@/lib/credits");
         await getOrCreateCredits(user.id);
+
+        // Workspace seeding must never block sign-in — log and continue.
+        try {
+          const { getOrCreatePersonalWorkspace } = await import("@/lib/workspaces/service");
+          await getOrCreatePersonalWorkspace(user.id);
+        } catch (err) {
+          console.error("Failed to seed personal workspace on sign-in", err);
+        }
       }
       return true;
     },

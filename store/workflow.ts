@@ -4,7 +4,7 @@ import type { Node, Edge, Connection, NodeChange, EdgeChange } from "@xyflow/rea
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 import { api, type Workflow, type Execution, type ExecutionLog } from "@/lib/api";
 
-export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration";
+export type NodeType = "input" | "api" | "ai" | "logic" | "output" | "webhook" | "integration" | "retrieval";
 
 export interface WorkflowNode extends Node {
   type: NodeType;
@@ -165,10 +165,15 @@ const defaultConfigs: Record<NodeType, Record<string, unknown>> = {
     actionName: "",
     input: {},
   },
+  retrieval: {
+    queryTemplate: "",
+    topK: 5,
+  },
 };
 
 const nodeLabels: Record<NodeType, string> = {
   input: "Input",
+  retrieval: "Your docs",
   api: "API Fetch",
   ai: "AI / LLM",
   logic: "Logic",

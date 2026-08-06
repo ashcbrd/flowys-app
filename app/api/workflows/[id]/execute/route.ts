@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       startedAt: now,
     });
 
-    const executor = createExecutor(nodesToExecute, edgesToExecute);
+    const executor = createExecutor(nodesToExecute, edgesToExecute, { userId: user.id });
     const result = await executor.execute(body?.input || {});
     const creditCost = calculateWorkflowCost(nodesToExecute);
     const deduction = await deductCredits(user.id, creditCost);

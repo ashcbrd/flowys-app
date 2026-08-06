@@ -215,7 +215,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Execute workflow
     try {
-      const executor = new WorkflowExecutor(workflow.nodes, workflow.edges);
+      // Webhook-triggered runs act as the workflow owner; the caller is anonymous.
+      const executor = new WorkflowExecutor(workflow.nodes, workflow.edges, { userId: workflow.userId });
       const result = await executor.execute(body);
 
       // Update execution
