@@ -18,6 +18,33 @@ export function calculateWorkflowCost(nodes: NodeData[]): number {
   return nodes.reduce((total, node) => total + (CREDIT_COSTS[node.type] || 0), 0);
 }
 
+/**
+ * What indexing a document costs.
+ *
+ * Embedding is billed per chunk because that is what is actually sent to the
+ * provider: a 200 page policy document is two orders of magnitude more work
+ * than a one page FAQ, and charging both the same would make the number
+ * meaningless. One credit per ten chunks keeps a typical handbook in single
+ * figures while a large corpus still shows up.
+ *
+ * Indexing was free and untracked until this existed, which meant the one part
+ * of the product with an unbounded per-request cost was the one part with no
+ * record of what it had spent.
+ */
+export function calculateIndexingCost(chunkCount: number): number {
+  if (chunkCount <= 0) return 0;
+  return Math.max(1, Math.ceil(chunkCount / 10));
+}
+
+/**
+ * What answering one question over documents costs.
+ *
+ * A retrieval is one embedding of the question plus a vector search, so it is
+ * cheap; the answer that follows is an ordinary AI call and is billed at the
+ * `ai` rate by whatever makes it.
+ */
+export const RETRIEVAL_COST = 1;
+
 export async function getOrCreateCredits(userId: string): Promise<{ remaining: number; used: number }> {
   await connectToDatabase();
 
