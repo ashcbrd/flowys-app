@@ -101,6 +101,11 @@ export interface RetrievalNodeConfig {
   topK?: number;
   /** Restrict to one knowledge base; defaults to everything the owner can see. */
   knowledgeBaseId?: string;
+  /**
+   * Spend an extra model call reordering passages by how directly they answer.
+   * Off by default: a step running thousands of times a month should opt in.
+   */
+  rerank?: boolean;
 }
 
 export interface IntegrationNodeConfig {

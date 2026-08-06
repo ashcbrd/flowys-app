@@ -51,6 +51,18 @@ export default function KnowledgePage() {
     load();
   }, [load]);
 
+  // A queued document is indexed by a background worker, so the page has to
+  // find out on its own that it finished. Polling stops as soon as nothing is
+  // in flight, so an idle page makes no requests.
+  const anyInFlight = documents.some(
+    (d) => d.status === "pending" || d.status === "processing"
+  );
+  useEffect(() => {
+    if (!anyInFlight) return;
+    const timer = setInterval(load, 4000);
+    return () => clearInterval(timer);
+  }, [anyInFlight, load]);
+
   const submitDocument = async (request: RequestInit) => {
     setAdding(true);
     setAddError("");
@@ -283,7 +295,9 @@ export default function KnowledgePage() {
                         ? `${doc.chunkCount} section${doc.chunkCount === 1 ? "" : "s"}, searchable`
                         : doc.status === "failed"
                           ? doc.error || "Failed"
-                          : "Still processing"}
+                          : doc.status === "pending"
+                            ? "Queued. Large documents are indexed in the background, so you can leave this page."
+                            : "Indexing now"}
                     </p>
                   </div>
                   <span

@@ -20,6 +20,14 @@ export interface IKnowledgeDocument {
   acl: IDocumentAcl;
   checksum?: string;
   chunkCount: number;
+  /** Set when a worker claims this document, so a crashed claim can be reclaimed. */
+  claimedAt?: Date;
+  /** How many times processing has been attempted. Bounded, then failed for good. */
+  attempts: number;
+  /** The raw text to index, held only while the document is pending. */
+  pendingText?: string;
+  /** Charge indexing to this account when it completes. */
+  meteredToUserId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,9 +56,19 @@ const KnowledgeDocumentSchema = new Schema<IKnowledgeDocument>(
     },
     checksum: { type: String },
     chunkCount: { type: Number, default: 0 },
+    claimedAt: { type: Date },
+    attempts: { type: Number, default: 0 },
+    // Cleared the moment indexing succeeds. Keeping the source text forever
+    // would double storage for no benefit: the chunks are the searchable copy.
+    pendingText: { type: String },
+    meteredToUserId: { type: String },
   },
   { timestamps: true, _id: false }
 );
+
+// The processor claims the oldest pending document; without this index that
+// is a collection scan on every tick.
+KnowledgeDocumentSchema.index({ status: 1, claimedAt: 1 });
 
 export const KnowledgeDocument: Model<IKnowledgeDocument> =
   mongoose.models.KnowledgeDocument ||

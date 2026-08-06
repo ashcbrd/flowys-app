@@ -98,3 +98,5 @@ export {
   Chunk,
   type IChunk,
 } from "./models/Chunk";
+
+export { AuditLog, type IAuditLog, type AuditAction } from "./models/AuditLog";

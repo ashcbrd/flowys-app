@@ -60,6 +60,7 @@ export class RetrievalNodeHandler implements NodeHandler {
         query,
         knowledgeBaseId: config.knowledgeBaseId || undefined,
         topK: config.topK ?? 5,
+        rerank: config.rerank === true,
       });
 
       return {

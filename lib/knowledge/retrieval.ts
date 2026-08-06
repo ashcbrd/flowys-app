@@ -44,6 +44,12 @@ export interface RetrieveOptions {
   query: string;
   knowledgeBaseId?: string;
   topK?: number;
+  /**
+   * Reorder results by how directly they answer the question. Costs one extra
+   * model call, so it is opt-in: a workflow step running thousands of times a
+   * month should be able to decline it.
+   */
+  rerank?: boolean;
 }
 
 export interface RetrievedChunk {
@@ -144,9 +150,12 @@ export async function retrieve(options: RetrieveOptions): Promise<RetrievedChunk
 
   const [vectorHits, textHits] = await Promise.all([vectorLeg, textLeg]);
 
-  const fused = fuseByReciprocalRank([vectorHits, textHits], topK);
+  // Fuse deeper than topK when reranking, so the reranker has passages to
+  // promote. Cutting to topK first would mean reranking a list that already
+  // dropped the answer.
+  const fused = fuseByReciprocalRank([vectorHits, textHits], options.rerank ? legDepth : topK);
 
-  return fused.map((hit) => ({
+  const hydrated = fused.map((hit) => ({
     documentId: hit.documentId,
     documentTitle: titles.get(hit.documentId) ?? "Untitled",
     knowledgeBaseId: hit.knowledgeBaseId,
@@ -155,6 +164,11 @@ export async function retrieve(options: RetrieveOptions): Promise<RetrievedChunk
     text: hit.text,
     score: hit.score,
   }));
+
+  if (!options.rerank || hydrated.length <= 1) return hydrated.slice(0, topK);
+
+  const { getReranker } = await import("@/lib/knowledge/rerank");
+  return getReranker().rerank(query, hydrated, topK);
 }
 
 interface RawHit {

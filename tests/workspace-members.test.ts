@@ -63,6 +63,13 @@ vi.mock("@/lib/db/models/Membership", () => ({
   },
 }));
 
+const audits: { action: string; actorId: string; summary: string }[] = [];
+vi.mock("@/lib/workspaces/audit", () => ({
+  recordAudit: vi.fn(async (entry: { action: string; actorId: string; summary: string }) => {
+    audits.push(entry);
+  }),
+}));
+
 vi.mock("@/lib/db/models/Workspace", () => ({
   Workspace: {
     create: async (doc: Record<string, unknown>) => ({ ...doc, _id: "ws-new" }),
@@ -82,6 +89,7 @@ beforeEach(() => {
     { workspaceId: WS, userId: "admin-1", role: "admin", createdAt: new Date() },
     { workspaceId: WS, userId: "member-1", role: "member", createdAt: new Date() },
   ];
+  audits.length = 0;
   state.users = [
     { _id: "owner-1", email: "owner@example.com" },
     { _id: "admin-1", email: "admin@example.com" },
@@ -200,6 +208,30 @@ describe("ordinary changes", () => {
     state.memberships.push({ workspaceId: WS, userId: "gone", role: "member", createdAt: new Date() });
     const rows = await listMembers(WS);
     expect(rows.find((r) => r.userId === "gone")!.email).toBe("(deleted account)");
+  });
+});
+
+describe("the audit trail", () => {
+  it("records who added whom, which is the only way to answer that later", async () => {
+    await addMember(WS, "owner-1", "new@example.com", "member");
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ action: "member.added", actorId: "owner-1" });
+    expect(audits[0].summary).toContain("new@example.com");
+  });
+
+  it("records a role change with both the old and the new role", async () => {
+    await changeRole(WS, "owner-1", "member-1", "admin");
+    expect(audits[0].summary).toMatch(/from member to admin/);
+  });
+
+  it("records a removal", async () => {
+    await removeMember(WS, "owner-1", "member-1");
+    expect(audits[0]).toMatchObject({ action: "member.removed", actorId: "owner-1" });
+  });
+
+  it("records nothing when the act was refused", async () => {
+    await expect(removeMember(WS, "admin-1", "owner-1")).rejects.toThrow();
+    expect(audits).toHaveLength(0);
   });
 });
 

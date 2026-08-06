@@ -37,6 +37,10 @@ export async function POST(request: NextRequest) {
       knowledgeBaseId:
         typeof body?.knowledgeBaseId === "string" ? body.knowledgeBaseId : undefined,
       topK: 5,
+      // A person waiting on a single answer can afford one extra model call;
+      // getting the passage that states the answer into position [1] is worth
+      // more here than the latency it costs.
+      rerank: true,
     });
 
     // Charged only when a search actually ran and found something. A question

@@ -43,30 +43,44 @@ export default function TeamPage() {
   const [newWorkspace, setNewWorkspace] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const loadWorkspaces = useCallback(async () => {
-    const res = await fetch("/api/workspaces");
-    if (!res.ok) return;
-    const list: Workspace[] = await res.json();
-    setWorkspaces(list);
-    setActiveId((current) => current || list.find((w) => !w.personal)?.id || list[0]?.id || "");
-    setLoading(false);
-  }, []);
-
   const loadMembers = useCallback(async (workspaceId: string) => {
     if (!workspaceId) return;
     const res = await fetch(`/api/workspaces/${workspaceId}/members`);
     if (!res.ok) return;
     const data = await res.json();
-    setMembers(data.members);
-    setMyRole(data.role);
+    return data as { members: Member[]; role: Role };
+  }, []);
+
+  // Both effects guard against a response arriving after the component has
+  // gone, which is easy to hit here: switching workspaces quickly leaves an
+  // in-flight request whose answer belongs to the previous selection.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/workspaces");
+      if (!res.ok || cancelled) return;
+      const list: Workspace[] = await res.json();
+      if (cancelled) return;
+      setWorkspaces(list);
+      setActiveId((current) => current || list.find((w) => !w.personal)?.id || list[0]?.id || "");
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    loadWorkspaces();
-  }, [loadWorkspaces]);
-
-  useEffect(() => {
-    loadMembers(activeId);
+    let cancelled = false;
+    (async () => {
+      const data = await loadMembers(activeId);
+      if (!data || cancelled) return;
+      setMembers(data.members);
+      setMyRole(data.role);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [activeId, loadMembers]);
 
   const active = workspaces.find((w) => w.id === activeId);
@@ -82,7 +96,11 @@ export default function TeamPage() {
         setError(data?.error || "That did not work");
         return false;
       }
-      await loadMembers(activeId);
+      const data = await loadMembers(activeId);
+      if (data) {
+        setMembers(data.members);
+        setMyRole(data.role);
+      }
       return true;
     } finally {
       setBusy(false);
@@ -115,7 +133,8 @@ export default function TeamPage() {
         return;
       }
       setNewWorkspace("");
-      await loadWorkspaces();
+      const listRes = await fetch("/api/workspaces");
+      if (listRes.ok) setWorkspaces(await listRes.json());
       setActiveId(data.id);
     } finally {
       setCreating(false);
