@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         knowledgeBaseId,
         filename: file.name,
         buffer: Buffer.from(await file.arrayBuffer()),
+        meterToUserId: user.id,
       });
       return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
     }
@@ -86,7 +87,12 @@ export async function POST(request: NextRequest) {
     // A web page.
     if (typeof body?.url === "string" && body.url.trim()) {
       const { ingestUrl } = await import("@/lib/knowledge/ingest");
-      const result = await ingestUrl({ workspaceId, knowledgeBaseId, url: body.url.trim() });
+      const result = await ingestUrl({
+        workspaceId,
+        knowledgeBaseId,
+        url: body.url.trim(),
+        meterToUserId: user.id,
+      });
       return NextResponse.json(result, { status: result.status === "ready" ? 201 : 422 });
     }
 
@@ -107,7 +113,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await ingestText({ workspaceId, knowledgeBaseId, title, text });
+    const result = await ingestText({
+      workspaceId,
+      knowledgeBaseId,
+      title,
+      text,
+      meterToUserId: user.id,
+    });
 
     // A failed ingest is a real answer, not a server error: the document row
     // exists and carries the reason, which is what the UI shows.

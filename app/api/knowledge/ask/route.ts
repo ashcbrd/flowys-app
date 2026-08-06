@@ -4,6 +4,7 @@ import { getOrCreatePersonalWorkspace } from "@/lib/workspaces/service";
 import { retrieve, formatContext } from "@/lib/knowledge/retrieval";
 import { executePrompt } from "@/lib/providers";
 import { FIXED_PROVIDER, FIXED_MODEL } from "@/lib/providers/models";
+import { deductCredits, RETRIEVAL_COST } from "@/lib/credits";
 
 /**
  * Answer a question from the caller's own documents.
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest) {
         typeof body?.knowledgeBaseId === "string" ? body.knowledgeBaseId : undefined,
       topK: 5,
     });
+
+    // Charged only when a search actually ran and found something. A question
+    // against an empty workspace costs nothing, because it did no work.
+    if (chunks.length > 0) {
+      await deductCredits(user.id, RETRIEVAL_COST);
+    }
 
     if (chunks.length === 0) {
       return NextResponse.json({

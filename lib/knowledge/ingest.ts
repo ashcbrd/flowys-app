@@ -24,6 +24,8 @@ export interface IngestTextOptions {
   text: string;
   /** Defaults to the knowledge base's own visibility. */
   acl?: { mode: "workspace" | "restricted"; allowedUserIds?: string[]; allowedRoles?: string[] };
+  /** Charge indexing to this account. Omitted for internal or test ingestion. */
+  meterToUserId?: string;
 }
 
 export interface IngestResult {
@@ -105,6 +107,14 @@ export async function ingestText(options: IngestTextOptions): Promise<IngestResu
       { status: "ready", chunkCount: pieces.length, error: undefined }
     );
 
+    // Metered after success and on the real chunk count, not an estimate taken
+    // up front. A document that fails extraction costs the user nothing, which
+    // is the only version they would accept.
+    if (options.meterToUserId) {
+      const { deductCredits, calculateIndexingCost } = await import("@/lib/credits");
+      await deductCredits(options.meterToUserId, calculateIndexingCost(pieces.length));
+    }
+
     return { documentId: document._id, chunkCount: pieces.length, status: "ready" };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ingestion failed";
@@ -125,6 +135,7 @@ export interface IngestFileOptions {
   knowledgeBaseId: string;
   filename: string;
   buffer: Buffer;
+  meterToUserId?: string;
 }
 
 /** Ingest an uploaded file: extract, then share the text pipeline. */
@@ -136,6 +147,7 @@ export async function ingestFile(options: IngestFileOptions): Promise<IngestResu
     knowledgeBaseId: options.knowledgeBaseId,
     title: extracted.title ?? options.filename,
     text: extracted.text,
+    meterToUserId: options.meterToUserId,
   });
 }
 
@@ -143,6 +155,7 @@ export interface IngestUrlOptions {
   workspaceId: string;
   knowledgeBaseId: string;
   url: string;
+  meterToUserId?: string;
 }
 
 /** Ingest a web page: fetch behind the SSRF guard, then share the text pipeline. */
@@ -154,6 +167,7 @@ export async function ingestUrl(options: IngestUrlOptions): Promise<IngestResult
     knowledgeBaseId: options.knowledgeBaseId,
     title: extracted.title ?? options.url,
     text: extracted.text,
+    meterToUserId: options.meterToUserId,
   });
 }
 
