@@ -75,7 +75,7 @@ function safeUrl(url: string | undefined): string | null {
  * grammar the model is allowed: blank-line paragraphs and "- " bullets.
  * Anything fancier belongs to the layout, not the content.
  */
-function renderBody(body: string, palette: BrandPalette): string {
+function renderBody(body: string, palette: BrandPalette, centered = false): string {
   const blocks = body
     .split(/\n\s*\n/)
     .map((block) => block.trim())
@@ -90,14 +90,16 @@ function renderBody(body: string, palette: BrandPalette): string {
         const items = lines
           .map(
             (line) =>
-              `<tr><td width="24" valign="top" style="${FONT} font-size:15px; line-height:24px; color:${palette.primary};">&bull;</td>` +
-              `<td valign="top" style="${FONT} font-size:15px; line-height:24px; color:${palette.ink};">${escapeHtml(line.slice(2))}</td></tr>`
+              `<tr><td width="26" valign="top" style="${FONT} font-size:16px; line-height:27px; color:${palette.primary}; font-weight:bold;">&bull;</td>` +
+              `<td valign="top" style="${FONT} font-size:16px; line-height:27px; color:${palette.ink}; padding-bottom:6px; text-align:left;">${escapeHtml(line.slice(2))}</td></tr>`
           )
           .join("");
-        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;">${items}</table>`;
+        return centered
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 18px auto;">${items}</table>`
+          : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">${items}</table>`;
       }
 
-      return `<p style="${FONT} font-size:15px; line-height:24px; color:${palette.ink}; margin:0 0 16px 0;">${escapeHtml(
+      return `<p style="${FONT} font-size:16px; line-height:27px; color:${palette.ink}; margin:0 0 18px 0;">${escapeHtml(
         lines.join(" ")
       )}</p>`;
     })
@@ -108,9 +110,9 @@ function renderBody(body: string, palette: BrandPalette): string {
 function renderButton(text: string, url: string, palette: BrandPalette): string {
   const label = readableTextOn(palette.primary);
   return (
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px 0;"><tr>` +
-    `<td bgcolor="${palette.primary}" style="border-radius:6px;">` +
-    `<a href="${url}" target="_blank" style="${FONT} display:inline-block; padding:13px 28px; font-size:15px; font-weight:bold; color:${label}; text-decoration:none; border-radius:6px;">${escapeHtml(text)}</a>` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 28px 0;"><tr>` +
+    `<td bgcolor="${palette.primary}" style="border-radius:10px;">` +
+    `<a href="${url}" target="_blank" style="${FONT} display:inline-block; padding:15px 34px; font-size:15px; font-weight:bold; letter-spacing:0.3px; color:${label}; text-decoration:none; border-radius:10px;">${escapeHtml(text)}</a>` +
     `</td></tr></table>`
   );
 }
@@ -142,46 +144,57 @@ export function renderEmail(options: RenderEmailOptions): string {
     slots.footerText?.trim() || "You are receiving this because you signed up for updates."
   )}</p>`;
 
-  const body = renderBody(slots.body, palette);
+  const body = renderBody(slots.body, palette, options.layout === "announcement");
   const heading = escapeHtml(slots.heading);
 
   let header: string;
   let headingBlock: string;
 
+  // A 1px hairline between distinct visual zones, in the brand's own tint.
+  const hairline = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#e9eaee" style="font-size:1px; line-height:1px;">&nbsp;</td></tr></table>`;
+
   switch (options.layout) {
-    case "promo":
-      // A saturated hero: the header carries the brand colour and the heading
-      // sits inside it, reversed. Built to shout once.
+    case "promo": {
+      // A saturated hero: the brand colour carries the whole top of the card,
+      // the heading sits reversed inside it at display size, and a thin
+      // primaryDark base line gives the block a floor. Built to shout once.
+      const onHero = readableTextOn(palette.primary);
       header =
-        `<td bgcolor="${palette.primary}" style="padding:40px 40px 32px 40px; border-radius:8px 8px 0 0;" align="center">` +
-        renderLogo(options.logoUrl, 36) +
-        `<h1 style="${FONT} font-size:28px; line-height:36px; color:${readableTextOn(palette.primary)}; margin:${options.logoUrl ? "20px" : "0"} 0 0 0;">${heading}</h1>` +
-        `</td>`;
+        `<td bgcolor="${palette.primary}" style="padding:52px 48px 44px 48px; border-radius:14px 14px 0 0;" align="center">` +
+        renderLogo(options.logoUrl, 40) +
+        `<h1 style="${FONT} font-size:34px; line-height:42px; font-weight:800; letter-spacing:-0.5px; color:${onHero}; margin:${options.logoUrl ? "24px" : "0"} 0 0 0;">${heading}</h1>` +
+        `</td></tr><tr><td height="5" bgcolor="${palette.primaryDark}" style="font-size:1px; line-height:1px;">&nbsp;`;
       headingBlock = "";
       break;
+    }
 
     case "announcement":
-      // Quiet and centred: a thin brand rule under the logo, then the news.
+      // Quiet and centred: generous air, the logo, a short brand rule, then
+      // the news in a serif-adjacent weight. The restraint is the design.
       header =
-        `<td align="center" style="padding:40px 40px 0 40px;">` +
-        renderLogo(options.logoUrl, 32) +
-        `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="48" style="margin:24px 0 0 0;"><tr><td height="3" bgcolor="${palette.primary}" style="font-size:1px; line-height:1px;">&nbsp;</td></tr></table>` +
+        `<td align="center" style="padding:56px 48px 0 48px;">` +
+        renderLogo(options.logoUrl, 34) +
+        `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="44" align="center" style="margin:${options.logoUrl ? "28px" : "0"} auto 0 auto;"><tr><td height="4" bgcolor="${palette.primary}" style="font-size:1px; line-height:1px; border-radius:2px;">&nbsp;</td></tr></table>` +
         `</td>`;
-      headingBlock = `<h1 style="${FONT} font-size:24px; line-height:32px; color:${palette.ink}; margin:0 0 16px 0; text-align:center;">${heading}</h1>`;
+      headingBlock = `<h1 style="${FONT} font-size:30px; line-height:39px; font-weight:800; letter-spacing:-0.4px; color:${palette.ink}; margin:0 0 20px 0; text-align:center;">${heading}</h1>`;
       break;
 
     case "newsletter":
     default:
-      // The workhorse: logo on a tinted band, left-aligned reading below.
-      header =
-        `<td bgcolor="${palette.primaryLight}" style="padding:24px 40px; border-radius:8px 8px 0 0;">` +
-        renderLogo(options.logoUrl, 32) +
-        `</td>`;
-      headingBlock = `<h1 style="${FONT} font-size:24px; line-height:32px; color:${palette.ink}; margin:0 0 16px 0;">${heading}</h1>`;
+      // The workhorse: a slim brand accent along the card's top edge, the
+      // logo on a tinted band, then left-aligned reading with a big heading.
+      header = safeUrl(options.logoUrl)
+        ? `<td height="5" bgcolor="${palette.primary}" style="font-size:1px; line-height:1px; border-radius:14px 14px 0 0;">&nbsp;</td></tr>` +
+          `<tr><td bgcolor="${palette.primaryLight}" style="padding:26px 48px;">` +
+          renderLogo(options.logoUrl, 34) +
+          `</td>`
+        : `<td height="5" bgcolor="${palette.primary}" style="font-size:1px; line-height:1px; border-radius:14px 14px 0 0;">&nbsp;</td>`;
+      headingBlock = `<h1 style="${FONT} font-size:28px; line-height:37px; font-weight:800; letter-spacing:-0.4px; color:${palette.ink}; margin:0 0 20px 0;">${heading}</h1>`;
       break;
   }
 
   const centreBody = options.layout === "announcement" ? " text-align:center;" : "";
+  const centreButton = options.layout === "announcement" || options.layout === "promo";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -194,17 +207,21 @@ export function renderEmail(options: RenderEmailOptions): string {
 <body style="margin:0; padding:0; background-color:${palette.paper};">
 ${preheader}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${palette.paper}">
-<tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:8px;">
+<tr><td align="center" style="padding:40px 16px 48px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:14px; border:1px solid #e9eaee;">
 <tr>${header}</tr>
-<tr><td style="padding:32px 40px 8px 40px;${centreBody}">
+<tr><td style="padding:40px 48px 10px 48px;${centreBody}">
 ${headingBlock}
 ${body}
-${button}
+${centreButton && button ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center">${button}</td></tr></table>` : button}
 </td></tr>
-<tr><td style="padding:0 40px 32px 40px; border-top:1px solid #eeeeee; padding-top:20px;${centreBody}">
+<tr><td style="padding:0 48px;">${hairline}</td></tr>
+<tr><td style="padding:22px 48px 36px 48px;${centreBody}">
 ${footer}
 </td></tr>
+</table>
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%;">
+<tr><td align="center" style="${FONT} padding:20px 12px 0 12px; font-size:12px; line-height:18px; color:#9aa0aa;">${escapeHtml(slots.subject)}</td></tr>
 </table>
 </td></tr>
 </table>
