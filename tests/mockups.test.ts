@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { ZONES, composeMockups, extractLogoColor, paletteStripPng } from "@/lib/brand/mockups";
+import { ZONES, KIND_SCENES, normalizeKind, composeMockups, extractLogoColor, paletteStripPng } from "@/lib/brand/mockups";
 import { buildBoardMarkdown } from "@/lib/brand/board";
 import { deriveBrandPalette } from "@/lib/brand/color";
 
@@ -35,11 +35,31 @@ describe("mockup scenes", () => {
     }
   });
 
-  it("composites the logo into every scene at scene size", async () => {
-    const logo = await testLogo(200, 30, 40);
-    const mockups = await composeMockups(logo);
+  it("every business kind maps to five scenes that exist", () => {
+    const known = new Set(ZONES.map((z) => z.scene));
+    for (const [kind, scenes] of Object.entries(KIND_SCENES)) {
+      expect(scenes, kind).toHaveLength(5);
+      for (const scene of scenes) expect(known.has(scene), `${kind}: ${scene}`).toBe(true);
+    }
+  });
 
-    expect(mockups.map((m) => m.title)).toEqual(ZONES.map((z) => z.title));
+  it("normalizes whatever a model hands back", () => {
+    expect(normalizeKind("Construction ")).toBe("construction");
+    expect(normalizeKind("beverage company")).toBe("other");
+    expect(normalizeKind(undefined)).toBe("other");
+  });
+
+  it("composites the kind's scenes at scene size", async () => {
+    const logo = await testLogo(200, 30, 40);
+    const mockups = await composeMockups(logo, "construction");
+
+    expect(mockups.map((m) => m.title)).toEqual([
+      "Van",
+      "Site board",
+      "Shirt",
+      "Business card",
+      "Storefront",
+    ]);
 
     for (const mockup of mockups) {
       const meta = await sharp(mockup.png).metadata();
@@ -50,7 +70,7 @@ describe("mockup scenes", () => {
 
   it("actually places the logo: the zone's centre pixel takes its colour", async () => {
     const logo = await testLogo(200, 30, 40);
-    const [bottle] = await composeMockups(logo);
+    const [bottle] = await composeMockups(logo, "drink");
     const zone = ZONES[0];
 
     const { data, info } = await sharp(bottle.png).raw().toBuffer({ resolveWithObject: true });

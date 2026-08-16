@@ -47,7 +47,48 @@ export const ZONES: Zone[] = [
   { title: "Tote bag", scene: "tote", left: 387, top: 530, width: 250, height: 250, blend: "multiply" },
   { title: "Business card", scene: "card", left: 402, top: 425, width: 220, height: 180, blend: "multiply" },
   { title: "Storefront", scene: "storefront", left: 362, top: 65, width: 300, height: 200, blend: "multiply" },
+  { title: "Van", scene: "van", left: 180, top: 390, width: 280, height: 150, blend: "multiply" },
+  { title: "Site board", scene: "signboard", left: 300, top: 240, width: 450, height: 320, blend: "multiply" },
+  { title: "Shirt", scene: "shirt", left: 382, top: 335, width: 245, height: 245, blend: "multiply" },
+  { title: "Shopping bag", scene: "bag", left: 387, top: 430, width: 250, height: 250, blend: "multiply" },
+  { title: "Laptop", scene: "laptop", left: 412, top: 400, width: 200, height: 200, blend: "multiply" },
 ];
+
+/** Stored config values. Frozen: they persist inside saved workflows. */
+export type BusinessKind =
+  | "drink"
+  | "food"
+  | "retail"
+  | "construction"
+  | "services"
+  | "tech"
+  | "other";
+
+/**
+ * Which five scenes suit which kind of business. A construction firm's logo
+ * belongs on a van and a site board, not a beverage bottle; the mistake of
+ * showing every business the same shelf of products is exactly the kind of
+ * genericness the composited pipeline exists to avoid. Every set keeps the
+ * business card and the storefront, because every business has a door and a
+ * handshake.
+ */
+export const KIND_SCENES: Record<BusinessKind, string[]> = {
+  drink: ["bottle", "cup", "tote", "card", "storefront"],
+  food: ["bag", "cup", "tote", "card", "storefront"],
+  retail: ["bag", "shirt", "tote", "card", "storefront"],
+  construction: ["van", "signboard", "shirt", "card", "storefront"],
+  services: ["van", "shirt", "tote", "card", "storefront"],
+  tech: ["laptop", "shirt", "tote", "card", "storefront"],
+  other: ["shirt", "tote", "card", "storefront", "laptop"],
+};
+
+/** Anything a model hands back that is not in the vocabulary lands on "other". */
+export function normalizeKind(raw: string | undefined): BusinessKind {
+  const kind = (raw ?? "").trim().toLowerCase();
+  return (Object.keys(KIND_SCENES) as BusinessKind[]).includes(kind as BusinessKind)
+    ? (kind as BusinessKind)
+    : "other";
+}
 
 function scenePath(scene: string): string {
   return path.join(process.cwd(), "public", "mockups", `${scene}.png`);
@@ -59,13 +100,18 @@ export interface Mockup {
 }
 
 /**
- * The logo placed into every scene. The logo is contain-fitted into each
- * zone, so any aspect ratio lands unsquashed.
+ * The logo placed into the scenes that suit the business. The logo is
+ * contain-fitted into each zone, so any aspect ratio lands unsquashed.
  */
-export async function composeMockups(logoPng: Buffer): Promise<Mockup[]> {
+export async function composeMockups(
+  logoPng: Buffer,
+  kind: BusinessKind = "other"
+): Promise<Mockup[]> {
   const mockups: Mockup[] = [];
+  const scenes = KIND_SCENES[kind] ?? KIND_SCENES.other;
+  const zones = scenes.map((name) => ZONES.find((z) => z.scene === name)!);
 
-  for (const zone of ZONES) {
+  for (const zone of zones) {
     const scene = await readFile(scenePath(zone.scene));
 
     const fitted = await sharp(logoPng)

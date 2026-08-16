@@ -1823,6 +1823,18 @@ function BrandNodeConfigSection({ config, onChange, fields: upstreamFields = [] 
         <p className="text-xs text-muted-foreground mt-1">{BRAND_TERMS.taglineHelp}</p>
       </div>
 
+      <div>
+        <Label>{BRAND_TERMS.kindLabel}</Label>
+        <TemplateInput
+          value={(config.kindTemplate as string) ?? "{{businessKind}}"}
+          onChange={(value) => onChange("kindTemplate", value)}
+          fields={upstreamFields}
+          placeholder="{{businessKind}}"
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{BRAND_TERMS.kindHelp}</p>
+      </div>
+
       <p className="text-xs text-muted-foreground">
         Takes the logo, puts it on a bottle, a cup, a tote bag, a business card
         and a storefront, pulls a colour palette out of it, and lays everything

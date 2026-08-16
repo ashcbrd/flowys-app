@@ -33,6 +33,7 @@ export class BrandNodeHandler implements NodeHandler {
     const businessName =
       interpolateVariables(config.businessNameTemplate || "", scope, "empty").trim() || "Brand board";
     const tagline = interpolateVariables(config.taglineTemplate || "", scope, "empty").trim();
+    const rawKind = interpolateVariables(config.kindTemplate || "{{businessKind}}", scope, "empty").trim();
 
     try {
       const { parseAssetId, getOwnedAssetData, saveAsset } = await import("@/lib/assets/store");
@@ -55,7 +56,7 @@ export class BrandNodeHandler implements NodeHandler {
 
       const logoPng = logo.data;
 
-      const { composeMockups, extractLogoColor, paletteStripPng } = await import(
+      const { composeMockups, extractLogoColor, paletteStripPng, normalizeKind } = await import(
         "@/lib/brand/mockups"
       );
       const { deriveBrandPalette } = await import("@/lib/brand/color");
@@ -80,7 +81,7 @@ export class BrandNodeHandler implements NodeHandler {
         data: strip,
       });
 
-      const mockups = await composeMockups(logoPng);
+      const mockups = await composeMockups(logoPng, normalizeKind(rawKind));
       const mockupUrls: { title: string; url: string }[] = [];
       for (const mockup of mockups) {
         const saved = await saveAsset({
@@ -122,7 +123,7 @@ export class BrandNodeHandler implements NodeHandler {
     const errors: string[] = [];
     const c = config as Partial<BrandNodeConfig>;
 
-    for (const key of ["sourceTemplate", "businessNameTemplate", "taglineTemplate"] as const) {
+    for (const key of ["sourceTemplate", "businessNameTemplate", "taglineTemplate", "kindTemplate"] as const) {
       if (c[key] !== undefined && typeof c[key] !== "string") {
         errors.push(`${key} must be text`);
       }

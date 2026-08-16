@@ -121,6 +121,8 @@ export interface ImageNodeConfig {
 export interface BrandNodeConfig {
   /** Which image to build the kit from; defaults to the upstream {{assetId}}. */
   sourceTemplate?: string;
+  /** What kind of business this is, deciding which mockup scenes are used. */
+  kindTemplate?: string;
   /** The board's title. */
   businessNameTemplate?: string;
   /** One line under the title, italic. */

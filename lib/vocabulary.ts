@@ -237,6 +237,9 @@ export const BRAND_TERMS = {
   nameLabel: "Business name",
   taglineLabel: "Tagline",
   taglineHelp: "One line under the name. Optional.",
+  kindLabel: "What kind of business?",
+  kindHelp:
+    "Decides which mockups the logo goes on: a builder gets a van and a site board, a cafe gets cups and bags. Usually filled in by an earlier AI step.",
 } as const;
 
 export const EMAIL_LAYOUTS_TERMS: Term[] = [

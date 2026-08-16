@@ -65,6 +65,31 @@ const SCENES = [
     prompt:
       "Photograph of a small modern shop storefront with a completely blank flat white rectangular sign board mounted above the window, photographed straight on from street level, daylight, no text, no logos, no people",
   },
+  {
+    name: "van",
+    prompt:
+      "Studio photograph of a plain white delivery van in perfect side view, side panel completely blank and flat, photographed straight on, soft daylight, seamless light grey background, no text, no logos, no people",
+  },
+  {
+    name: "signboard",
+    prompt:
+      "Photograph of a blank white rectangular site sign board mounted on two wooden posts at a tidy construction site, board facing the camera straight on, daylight, no text, no logos, no people",
+  },
+  {
+    name: "shirt",
+    prompt:
+      "Flat lay studio photograph of a plain white t-shirt photographed directly from above, chest area smooth and blank, soft natural shadows, seamless neutral background, no text, no logos",
+  },
+  {
+    name: "bag",
+    prompt:
+      "Studio product photograph of a plain kraft paper shopping bag with handles, front panel facing the camera, completely blank, photographed straight on, soft daylight, seamless neutral background, no text, no logos",
+  },
+  {
+    name: "laptop",
+    prompt:
+      "Studio photograph of a modern silver laptop with its closed lid facing the camera, lid completely blank, photographed straight on at eye level on a light desk, soft daylight, no text, no logos",
+  },
 ];
 
 async function generate(prompt) {

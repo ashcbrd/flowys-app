@@ -179,6 +179,7 @@ const defaultConfigs: Record<NodeType, Record<string, unknown>> = {
     sourceTemplate: "{{assetId}}",
     businessNameTemplate: "",
     taglineTemplate: "",
+    kindTemplate: "{{businessKind}}",
   },
   email: {
     layout: "newsletter",

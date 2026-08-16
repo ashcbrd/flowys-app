@@ -1254,6 +1254,7 @@ function brandKit(
         sourceTemplate: "{{assetId}}",
         businessNameTemplate: opts.name,
         taglineTemplate: opts.tagline ?? "",
+        kindTemplate: "{{businessKind}}",
       },
     },
   };
@@ -1519,6 +1520,11 @@ const LOGO_BRAND_BOARD: WorkflowTemplate = {
           },
           brief: { type: "string", description: "The design brief in two sentences" },
           styleSummary: { type: "string", description: "The style, restated in one line" },
+          businessKind: {
+            type: "string",
+            description:
+              "Exactly one of: drink, food, retail, construction, services, tech, other. Pick the closest.",
+          },
         },
       }),
 
