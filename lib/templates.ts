@@ -894,28 +894,33 @@ const GITHUB_BRIEF: WorkflowTemplate = {
   id: "github-brief",
   name: "Brief me on a GitHub project",
   description:
-    "12 steps. Looks up any public project, reads its open issues, and tells you what it does, how healthy it looks, and whether it is worth adopting.",
+    "13 steps. Paste any public GitHub link, and it looks the project up, reads its open issues, and tells you what it does, how healthy it looks, and whether it is worth adopting.",
   category: "Research",
-  needs: "The owner and name of a public GitHub project",
+  needs: "The link to any public GitHub project",
   workflow: {
     nodes: [
       ask("n1", "Which project?", 0, 1, [
         {
-          name: "owner",
+          name: "repoLink",
           type: "string",
           required: true,
-          label: "Owner",
-          description: "The user or organisation, as it appears in the address.",
-          placeholder: "facebook",
-        },
-        {
-          name: "repo",
-          type: "string",
-          required: true,
-          label: "Project name",
-          placeholder: "react",
+          label: "The project's link",
+          description:
+            "Copy the address from your browser and drop it in here. Something like owner/name works too.",
+          placeholder: "https://github.com/facebook/react",
         },
       ]),
+
+      think("n0", "Read the address", 1, 1, {
+        system:
+          "You read a GitHub project address and name its two parts. Accept a full link, an owner/name pair, or a link with extras like .git, a trailing slash, or a path into the project. The owner is the user or organisation; the project is the repository name without .git.",
+        prompt: "The address: {{repoLink}}\n\nName its parts.",
+        temperature: 0,
+        gives: {
+          owner: { type: "string", description: "The user or organisation from the address" },
+          repo: { type: "string", description: "The project name from the address, without .git" },
+        },
+      }),
 
       fetchFrom("n2", "Look up the project", 1, 0, {
         url: "https://api.github.com/repos/{{owner}}/{{repo}}",
@@ -1044,8 +1049,9 @@ const GITHUB_BRIEF: WorkflowTemplate = {
 
     ],
     edges: wire(
-      "n1>n2",
-      "n1>n3",
+      "n1>n0",
+      "n0>n2",
+      "n0>n3",
       "n2>n4",
       "n2>n5",
       "n5>n6",
