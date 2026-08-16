@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Clock,
   Calendar,
+  Layers,
   Plug,
   Loader2,
   Check,
@@ -540,6 +541,12 @@ export function Header() {
                 <DropdownMenuItem onClick={() => setSchedulesOpen(true)}>
                   <Calendar className="h-4 w-4" />
                   Scheduled Runs
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/results">
+                    <Layers className="h-4 w-4" />
+                    All Results
+                  </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
