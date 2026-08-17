@@ -5,6 +5,7 @@ import { authenticateApiKey, createApiErrorResponse } from "@/lib/middleware/api
 import { WorkflowExecutor } from "@/lib/engine/executor";
 import { triggerWebhooks } from "@/lib/services/webhookService";
 import { hasEnoughCredits, deductCredits, calculateWorkflowCost } from "@/lib/credits";
+import { consumeDailyRun, dailyLimitMessage } from "@/lib/limits/daily-runs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -80,6 +81,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         `Insufficient credits. Required: ${creditCheck.required}, Remaining: ${creditCheck.remaining}`,
         402
       );
+    }
+
+    const allowance = await consumeDailyRun(workflow.userId);
+    if (!allowance.allowed) {
+      return createApiErrorResponse(dailyLimitMessage(allowance.resetAt), 429);
     }
 
     // Parse input

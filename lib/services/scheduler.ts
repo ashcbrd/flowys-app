@@ -1,6 +1,7 @@
 import cron, { ScheduledTask } from "node-cron";
 import { connectToDatabase, Schedule, Workflow, Execution, getNextRunTime } from "@/lib/db";
 import { createExecutor } from "@/lib/engine";
+import { consumeDailyRun, dailyLimitMessage } from "@/lib/limits/daily-runs";
 import { v4 as uuid } from "uuid";
 
 // Store active cron jobs
@@ -106,6 +107,23 @@ export async function executeScheduledWorkflow(scheduleId: string): Promise<{
         $inc: { totalRuns: 1, failedRuns: 1 },
       });
       return { success: false, error: "Workflow not found" };
+    }
+
+    // A schedule left on a short interval is the cheapest way to spend a lot of
+    // money unattended, so the day's cap is checked before anything is created.
+    // The skip is recorded on the schedule with its reason, because a schedule
+    // that silently does nothing is the hardest kind of problem to notice.
+    const allowance = await consumeDailyRun(workflow.userId);
+    if (!allowance.allowed) {
+      const reason = dailyLimitMessage(allowance.resetAt);
+      await Schedule.findByIdAndUpdate(scheduleId, {
+        lastRunAt: new Date(),
+        nextRunAt: getNextRunTime(schedule.cronExpression, schedule.timezone),
+        lastRunStatus: "failed",
+        lastRunError: reason,
+        $inc: { totalRuns: 1, failedRuns: 1 },
+      });
+      return { success: false, error: reason };
     }
 
     // Create execution record

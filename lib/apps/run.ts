@@ -6,6 +6,7 @@ import { getAppForUser, getCurrentSnapshot } from "./service";
 import { createExecutor } from "@/lib/engine";
 import { calculateWorkflowCost, deductCredits } from "@/lib/credits";
 import { checkRateLimit } from "@/lib/db/models/RateLimit";
+import { consumeDailyRun, dailyLimitMessage } from "@/lib/limits/daily-runs";
 
 export type AppRunErrorCode = "not_found" | "not_published" | "rate_limited" | "cost_exceeded";
 
@@ -67,6 +68,14 @@ export async function runApp(params: {
         "rate_limited"
       );
     }
+  }
+
+  // The per-app hourly limit above is the owner's setting and is optional. This
+  // one is the account's ceiling for the day and applies whether they set one or
+  // not, because an app run costs the same as any other run.
+  const allowance = await consumeDailyRun(runByUserId);
+  if (!allowance.allowed) {
+    throw new AppRunError(dailyLimitMessage(allowance.resetAt), "rate_limited");
   }
 
   const appRunId = uuid();

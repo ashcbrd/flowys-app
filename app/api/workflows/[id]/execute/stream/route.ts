@@ -4,6 +4,7 @@ import { connectToDatabase, Workflow, Execution } from "@/lib/db";
 import { createExecutor } from "@/lib/engine";
 import { getAuthenticatedUser, verifyWorkflowOwnership } from "@/lib/auth-helpers";
 import { hasEnoughCredits, deductCredits, calculateWorkflowCost } from "@/lib/credits";
+import { consumeDailyRun, dailyLimitMessage, MAX_RUNS_PER_DAY } from "@/lib/limits/daily-runs";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -49,6 +50,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             code: "INSUFFICIENT_CREDITS",
             required: creditCheck.required,
             remaining: creditCheck.remaining,
+          });
+          controller.close();
+          return;
+        }
+
+        const allowance = await consumeDailyRun(user.id);
+        if (!allowance.allowed) {
+          sendEvent("error", {
+            error: dailyLimitMessage(allowance.resetAt),
+            code: "DAILY_RUN_LIMIT",
+            limit: MAX_RUNS_PER_DAY,
+            resetAt: allowance.resetAt,
           });
           controller.close();
           return;

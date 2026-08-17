@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { verifyWebhookSignature } from "@/lib/middleware/apiAuth";
 import { WorkflowExecutor } from "@/lib/engine/executor";
+import { consumeDailyRun, dailyLimitMessage } from "@/lib/limits/daily-runs";
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -182,6 +183,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { error: "Associated workflow not found" },
         { status: 404 }
+      );
+    }
+
+    // A webhook can fire in a loop with nobody watching, so the day's cap is
+    // checked before an execution record exists and before any provider is called.
+    const allowance = await consumeDailyRun(workflow.userId);
+    if (!allowance.allowed) {
+      return NextResponse.json(
+        { error: dailyLimitMessage(allowance.resetAt) },
+        { status: 429 }
       );
     }
 
